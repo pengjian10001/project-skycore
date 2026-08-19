@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统管理 | 仿真数据管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item.active {
+            background-color: #f0f9ff;
+            color: #0ea5e9;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-item.sub-item {
+            padding-left: 2.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .nav-item.sub-item.active {
+            background-color: #f0f9ff;
+            color: #0284c7;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-group .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .nav-group.expanded .submenu {
+            max-height: 200px;
+        }
+
+        .nav-group.expanded .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .compact-table th,
+        .compact-table td {
+            padding: 0.6rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .compact-table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .status-dot {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .status-online {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-offline {
+            background-color: #f1f5f9;
+            color: #64748b;
+        }
+
+        .status-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-running {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #0ea5e9;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #0ea5e9;
+        }
+
+        .tab-btn {
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        .form-input {
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .permission-checkbox:checked+div {
+            background-color: #0ea5e9;
+            border-color: #0ea5e9;
+        }
+
+        .permission-checkbox:checked+div svg {
+            display: block;
+        }
+
+        .archive-status-running {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .archive-status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .archive-status-failed {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm shrink-0">
+        <div class="h-14 flex items-center px-4 border-b border-slate-100">
+            <div class="w-7 h-7 bg-sky-600 rounded-md flex items-center justify-center mr-2 shadow-md shadow-sky-200">
+                <i class="fa-solid fa-satellite text-white text-xs"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-slate-800 text-xs tracking-tight">仿真数据管理</h1>
+                <p class="text-[9px] text-slate-400 uppercase tracking-wider">NSSC, CAS</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 text-sm">
+            <a href="./../首页-浅色版.html"
+                class="nav-item active flex items-center px-4 py-2.5 font-medium transition-colors hover:bg-slate-50">
+                <i class="fa-solid fa-chart-line w-5 text-xs"></i>
+                <span class="text-xs">数据实时监控</span>
+            </a>
+
+            <div class="nav-group expanded">
+                <div class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600 cursor-pointer"
+                    onclick="toggleSubmenu(this.parentElement)">
+                    <i class="fa-solid fa-database w-5 text-xs"></i>
+                    <span class="flex-1 text-xs">任务数据管理</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"></i>
+                </div>
+                <div class="submenu bg-slate-50/50">
+                    <a href="./1-2.1.任务管理.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        任务管理
+                    </a>
+                    <a href="./1-2.2.数据统计.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据统计
+                    </a>
+                    <a href="./1-2.3 数据查询.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据查询
+                    </a>
+                    <a href="./1-2.4.本地存储.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        本地存储
+                    </a>
+                </div>
+            </div>
+
+            <a href="./1-3.日志查询.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-file-code w-5 text-xs"></i>
+                <span class="text-xs">日志查询</span>
+            </a>
+
+            <a href="./1-4.系统管理.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-gear w-5 text-xs"></i>
+                <span class="text-xs">系统管理</span>
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+                <img src="https://ui-avatars.com/api/?name=Admin&background=e0f2fe&color=0ea5e9&size=32"
+                    class="w-7 h-7 rounded-full border border-slate-200">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-slate-900 truncate">系统管理员</p>
+                    <p class="text-[10px] text-slate-500 truncate">在线</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50/50 overflow-hidden">
+
+        <!-- Top Header -->
+        <header
+            class="bg-white border-b border-slate-200 h-12 flex items-center justify-between px-4 shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-slate-800 mr-2">系统管理中心</h2>
+                <span
+                    class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1">
+                    <span class="w-1 h-1 rounded-full bg-emerald-500 status-dot"></span>
+                    系统运行正常
+                </span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                    <div class="text-right">
+                        <div class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">系统时间</div>
+                        <div class="text-[10px] font-mono text-sky-600 font-semibold" id="systemTime">2024-01-15
+                            14:32:18</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
+            <!-- Tab Navigation -->
+            <div class="flex items-center gap-2 border-b border-slate-200 pb-3">
+                <button onclick="switchTab('user')" id="tab-user"
+                    class="tab-btn active px-4 py-2 rounded-md text-xs font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear"></i>
+                    人员角色权限
+                </button>
+                <button onclick="switchTab('database')" id="tab-database"
+                    class="tab-btn px-4 py-2 rounded-md text-xs font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+                    <i class="fa-solid fa-database"></i>
+                    数据库配置
+                </button>
+                <button onclick="switchTab('archive')" id="tab-archive"
+                    class="tab-btn px-4 py-2 rounded-md text-xs font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+                    <i class="fa-solid fa-box-archive"></i>
+                    数据归档备份
+                </button>
+                <button onclick="switchTab('records')" id="tab-records"
+                    class="tab-btn px-4 py-2 rounded-md text-xs font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    数据操作记录
+                </button>
+            </div>
+
+            <!-- Tab 1: 人员角色权限管理 -->
+            <div id="panel-user" class="space-y-3">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-4 gap-3">
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-sky-500">
+                        <div class="text-[11px] text-slate-500 mb-1">系统用户总数</div>
+                        <div class="text-xl font-bold text-slate-800">24 <span
+                                class="text-[10px] font-normal text-slate-400">人</span></div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-emerald-500">
+                        <div class="text-[11px] text-slate-500 mb-1">在线用户</div>
+                        <div class="text-xl font-bold text-slate-800">8 <span
+                                class="text-[10px] font-normal text-slate-400">人</span></div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-indigo-500">
+                        <div class="text-[11px] text-slate-500 mb-1">角色类型</div>
+                        <div class="text-xl font-bold text-slate-800">3 <span
+                                class="text-[10px] font-normal text-slate-400">种</span></div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-amber-500">
+                        <div class="text-[11px] text-slate-500 mb-1">待审核申请</div>
+                        <div class="text-xl font-bold text-slate-800">2 <span
+                                class="text-[10px] font-normal text-slate-400">条</span></div>
+                    </div>
+                </div>
+
+                <!-- User Management -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-users text-sky-600"></i>
+                            用户列表管理
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <i
+                                    class="fa-solid fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                                <input type="text" placeholder="搜索用户名/工号..."
+                                    class="pl-6 pr-2 py-1 text-[11px] border border-slate-200 rounded form-input w-40">
+                            </div>
+                            <button
+                                class="px-3 py-1.5 bg-sky-500 text-white text-[11px] font-medium rounded hover:bg-sky-600 transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                新增用户
+                            </button>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-left border-collapse compact-table">
+                        <thead class="bg-slate-50">
+                            <tr class="border-b border-slate-200 text-[10px] text-slate-500">
+                                <th class="whitespace-nowrap">用户账号</th>
+                                <th class="whitespace-nowrap">姓名</th>
+                                <th class="whitespace-nowrap">所属部门</th>
+                                <th class="whitespace-nowrap">角色权限</th>
+                                <th class="whitespace-nowrap">状态</th>
+                                <th class="whitespace-nowrap">最后登录</th>
+                                <th class="whitespace-nowrap text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap">admin001</td>
+                                <td class="font-medium text-slate-800 whitespace-nowrap">张管理员</td>
+                                <td class="whitespace-nowrap text-[11px]">系统管理部</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-medium">系统管理员</span>
+                                </td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-online"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>在线</span></td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 14:30:22</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">编辑</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors">权限</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap">op2024</td>
+                                <td class="font-medium text-slate-800 whitespace-nowrap">李操作员</td>
+                                <td class="whitespace-nowrap text-[11px]">载荷测试部</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">系统操作员</span>
+                                </td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-online"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>在线</span></td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 14:25:18</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">编辑</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors">权限</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap">data_mgr</td>
+                                <td class="font-medium text-slate-800 whitespace-nowrap">王数据管理员</td>
+                                <td class="whitespace-nowrap text-[11px]">数据中心</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">系统操作员</span>
+                                </td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-offline"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>离线</span></td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 09:15:33</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">编辑</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors">权限</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap">sci_003</td>
+                                <td class="font-medium text-slate-800 whitespace-nowrap">陈科学家</td>
+                                <td class="whitespace-nowrap text-[11px]">空间科学部</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">系统操作员</span>
+                                </td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-offline"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>离线</span></td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 11:20:45</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">编辑</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors">权限</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap">guest_01</td>
+                                <td class="font-medium text-slate-800 whitespace-nowrap">赵访客</td>
+                                <td class="whitespace-nowrap text-[11px]">外协单位</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium">普通访客</span>
+                                </td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-warning"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>锁定</span></td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-14 16:42:10</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">编辑</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">解锁</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="px-4 py-2 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
+                        <span class="text-[11px] text-slate-500">共 24 条记录，显示 1-5 条</span>
+                        <div class="flex items-center gap-1">
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white disabled:opacity-50"
+                                disabled>上一页</button>
+                            <button class="px-2 py-1 text-[10px] bg-sky-500 text-white rounded">1</button>
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">2</button>
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">3</button>
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">下一页</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Permission Matrix (3 Roles) -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                    <h3 class="text-xs font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved text-sky-600"></i>
+                        角色权限矩阵
+                    </h3>
+                    <div class="grid grid-cols-4 gap-3 text-[11px]">
+                        <div class="col-span-1 font-medium text-slate-700 p-2 bg-slate-50 rounded">功能模块</div>
+                        <div class="col-span-1 font-medium text-purple-700 p-2 bg-purple-50 rounded text-center">系统管理员</div>
+                        <div class="col-span-1 font-medium text-blue-700 p-2 bg-blue-50 rounded text-center">系统操作员</div>
+                        <div class="col-span-1 font-medium text-slate-700 p-2 bg-slate-50 rounded text-center">普通访客</div>
+
+                        <div class="col-span-1 p-2 border-b border-slate-100">实时监控查看</div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+
+                        <div class="col-span-1 p-2 border-b border-slate-100">任务创建/编辑</div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-slate-400"><i class="fa-solid fa-minus"></i></div>
+
+                        <div class="col-span-1 p-2 border-b border-slate-100">数据下载/导出</div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-amber-600"><i class="fa-solid fa-lock"></i></div>
+
+                        <div class="col-span-1 p-2 border-b border-slate-100">数据查询/检索</div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+
+                        <div class="col-span-1 p-2 border-b border-slate-100">数据统计报表</div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-slate-400"><i class="fa-solid fa-minus"></i></div>
+
+                        <div class="col-span-1 p-2 border-b border-slate-100">日志查看</div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-slate-400"><i class="fa-solid fa-minus"></i></div>
+
+                        <div class="col-span-1 p-2 border-b border-slate-100">系统配置修改</div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-slate-400"><i class="fa-solid fa-minus"></i></div>
+                        <div class="col-span-1 p-2 border-b border-slate-100 text-center text-slate-400"><i class="fa-solid fa-minus"></i></div>
+
+                        <div class="col-span-1 p-2">用户权限管理</div>
+                        <div class="col-span-1 p-2 text-center text-emerald-600"><i class="fa-solid fa-check"></i></div>
+                        <div class="col-span-1 p-2 text-center text-slate-400"><i class="fa-solid fa-minus"></i></div>
+                        <div class="col-span-1 p-2 text-center text-slate-400"><i class="fa-solid fa-minus"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: 数据库配置管理 -->
+            <div id="panel-database" class="hidden space-y-3">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="glass-panel rounded-lg p-3 bg-white">
+                        <div class="text-[11px] text-slate-500 mb-1">主数据库状态</div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 status-dot"></span>
+                            <span class="text-sm font-bold text-emerald-700">连接正常</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1">MySQL 8.0.32 | 延迟 2ms</div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white">
+                        <div class="text-[11px] text-slate-500 mb-1">存储容量</div>
+                        <div class="text-sm font-bold text-slate-800">2.4 TB / 5.0 TB</div>
+                        <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1.5">
+                            <div class="bg-sky-500 h-1.5 rounded-full" style="width: 48%"></div>
+                        </div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white">
+                        <div class="text-[11px] text-slate-500 mb-1">备份状态</div>
+                        <div class="text-sm font-bold text-slate-800">上次备份: 2小时前</div>
+                        <div class="text-[10px] text-emerald-600 mt-1 font-medium">自动备份已启用</div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                    <h3 class="text-xs font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-server text-sky-600"></i>
+                        主数据库连接配置
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">数据库主机</label>
+                            <input type="text" value="192.168.10.50"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">端口号</label>
+                            <input type="text" value="3306"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">数据库名称</label>
+                            <input type="text" value="simulation_db_v2"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">用户名</label>
+                            <input type="text" value="nssc_admin"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">连接字符串 (JDBC)</label>
+                            <input type="text"
+                                value="jdbc:mysql://192.168.10.50:3306/simulation_db_v2?useSSL=true&charset=utf8mb4"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50 font-mono">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 border-t border-slate-100 pt-3">
+                        <button
+                            class="px-4 py-2 bg-sky-500 text-white text-[11px] font-medium rounded hover:bg-sky-600 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate text-[10px]"></i>
+                            测试连接
+                        </button>
+                        <button
+                            class="px-4 py-2 bg-emerald-500 text-white text-[11px] font-medium rounded hover:bg-emerald-600 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+                            保存配置
+                        </button>
+                        <span class="text-[11px] text-slate-500 ml-2">修改后需重启数据服务生效</span>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <!-- Tab 3: 数据归档备份（新增） -->
+            <div id="panel-archive" class="hidden space-y-3">
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-4 gap-3">
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-sky-500">
+                        <div class="text-[11px] text-slate-500 mb-1">归档存储总量</div>
+                        <div class="text-xl font-bold text-slate-800">15.8 <span
+                                class="text-[10px] font-normal text-slate-400">TB</span></div>
+                        <div class="text-[10px] text-emerald-600 mt-1">较上月 +2.3 TB</div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-blue-500">
+                        <div class="text-[11px] text-slate-500 mb-1">归档任务数</div>
+                        <div class="text-xl font-bold text-slate-800">12 <span
+                                class="text-[10px] font-normal text-slate-400">个</span></div>
+                        <div class="text-[10px] text-blue-600 mt-1">运行中: 3 | 暂停: 9</div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-emerald-500">
+                        <div class="text-[11px] text-slate-500 mb-1">本月归档成功</div>
+                        <div class="text-xl font-bold text-slate-800">98.5 <span
+                                class="text-[10px] font-normal text-slate-400">%</span></div>
+                        <div class="text-[10px] text-emerald-600 mt-1">失败任务: 2 个</div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border-l-4 border-l-indigo-500">
+                        <div class="text-[11px] text-slate-500 mb-1">最近一次归档</div>
+                        <div class="text-sm font-bold text-slate-800">2小时前</div>
+                        <div class="text-[10px] text-slate-500 mt-1">任务: TASK-DAILY-001</div>
+                    </div>
+                </div>
+
+                <!-- 归档文件系统接口设置 -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                    <h3 class="text-xs font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-server text-sky-600"></i>
+                        归档文件系统接口设置
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">存储类型</label>
+                            <select class="w-full px-3 py-2 text-[11px] rounded form-input bg-white">
+                                <option>本地NAS存储</option>
+                                <option selected>分布式对象存储 (MinIO)</option>
+                                <option>阿里云OSS</option>
+                                <option>AWS S3</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">接口协议</label>
+                            <select class="w-full px-3 py-2 text-[11px] rounded form-input bg-white">
+                                <option selected>S3 API</option>
+                                <option>NFS</option>
+                                <option>SMB/CIFS</option>
+                                <option>REST API</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">服务端点 (Endpoint)</label>
+                            <input type="text" value="http://192.168.10.100:9000"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">存储桶 (Bucket)</label>
+                            <input type="text" value="simulation-archive-data"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">Access Key</label>
+                            <input type="password" value="minioadmin123456"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">Secret Key</label>
+                            <input type="password" value="minioadminsecret789"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50 font-mono">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[11px] font-medium text-slate-700 mb-1">归档根路径</label>
+                            <input type="text" value="/archive/simulation/2024/"
+                                class="w-full px-3 py-2 text-[11px] rounded form-input bg-slate-50">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 border-t border-slate-100 pt-3">
+                        <button
+                            class="px-4 py-2 bg-sky-500 text-white text-[11px] font-medium rounded hover:bg-sky-600 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-link text-[10px]"></i>
+                            测试连接
+                        </button>
+                        <button
+                            class="px-4 py-2 bg-emerald-500 text-white text-[11px] font-medium rounded hover:bg-emerald-600 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+                            保存配置
+                        </button>
+                        <button
+                            class="px-4 py-2 bg-amber-500 text-white text-[11px] font-medium rounded hover:bg-amber-600 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-right text-[10px]"></i>
+                            重新初始化
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 归档规则设置 -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                    <h3 class="text-xs font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-sky-600"></i>
+                        归档规则设置
+                    </h3>
+                    <div class="space-y-3">
+                        <!-- 归档开关 -->
+                        <div class="p-3 bg-slate-50 rounded border border-slate-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="block text-[12px] font-medium text-slate-800 mb-1">归档开关</label>
+                                    <div class="text-[11px] text-slate-500">控制自动归档功能的启用与禁用</div>
+                                </div>
+                                <div class="relative inline-block w-12 align-middle select-none">
+                                    <input type="checkbox" id="archiveToggle" checked
+                                        class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-slate-300 appearance-none cursor-pointer transition-all duration-300 right-0 border-sky-500" />
+                                    <label for="archiveToggle"
+                                        class="toggle-label block overflow-hidden h-6 rounded-full bg-sky-500 cursor-pointer"></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded border border-slate-200">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-700 mb-1">归档周期</label>
+                                <select class="w-full px-2 py-1.5 text-[11px] rounded form-input bg-white">
+                                    <option>每小时</option>
+                                    <option selected>每日</option>
+                                    <option>每周</option>
+                                    <option>每月</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-700 mb-1">执行时间</label>
+                                <input type="time" value="02:00"
+                                    class="w-full px-2 py-1.5 text-[11px] rounded form-input bg-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded border border-slate-200">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-700 mb-1">数据保留策略</label>
+                                <select class="w-full px-2 py-1.5 text-[11px] rounded form-input bg-white">
+                                    <option>永久保留</option>
+                                    <option selected>保留3年</option>
+                                    <option>保留5年</option>
+                                    <option>保留10年</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-700 mb-1">压缩方式</label>
+                                <select class="w-full px-2 py-1.5 text-[11px] rounded form-input bg-white">
+                                    <option selected>ZIP (标准压缩)</option>
+                                    <option>7Z (高压缩率)</option>
+                                    <option>TAR.GZ (Linux兼容)</option>
+                                    <option>不压缩</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 归档历史记录 -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-sky-600"></i>
+                            归档历史记录
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <i class="fa-solid fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                                <input type="text" placeholder="搜索任务ID..."
+                                    class="pl-6 pr-2 py-1 text-[11px] border border-slate-200 rounded form-input w-32">
+                            </div>
+                            <select class="text-[11px] border border-slate-200 rounded px-2 py-1 form-input bg-white">
+                                <option>全部状态</option>
+                                <option>成功</option>
+                                <option>失败</option>
+                                <option>运行中</option>
+                            </select>
+                            <button class="text-[11px] text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-download"></i>
+                                导出
+                            </button>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-left border-collapse compact-table">
+                        <thead class="bg-slate-50">
+                            <tr class="border-b border-slate-200 text-[10px] text-slate-500">
+                                <th class="whitespace-nowrap">执行ID</th>
+                                <th class="whitespace-nowrap">关联任务</th>
+                                <th class="whitespace-nowrap">开始时间</th>
+                                <th class="whitespace-nowrap">结束时间</th>
+                                <th class="whitespace-nowrap">归档数据量</th>
+                                <th class="whitespace-nowrap">文件数</th>
+                                <th class="whitespace-nowrap">执行结果</th>
+                                <th class="whitespace-nowrap text-center">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap text-[10px]">#EXEC-240115-001</td>
+                                <td class="whitespace-nowrap text-[11px]">ARC-001</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 02:00:15</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 02:45:33</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">128.5 GB</td>
+                                <td class="whitespace-nowrap text-[11px]">1,245</td>
+                                <td class="whitespace-nowrap"><span class="status-badge archive-status-completed"><i class="fa-solid fa-check text-[10px]"></i>成功</span></td>
+                                <td class="text-center whitespace-nowrap">
+                                    <button class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">查看</button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap text-[10px]">#EXEC-240115-002</td>
+                                <td class="whitespace-nowrap text-[11px]">ARC-002</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 10:23:45</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 10:25:12</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">2.3 GB</td>
+                                <td class="whitespace-nowrap text-[11px]">18</td>
+                                <td class="whitespace-nowrap"><span class="status-badge archive-status-completed"><i class="fa-solid fa-check text-[10px]"></i>成功</span></td>
+                                <td class="text-center whitespace-nowrap">
+                                    <button class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">查看</button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap text-[10px]">#EXEC-240115-003</td>
+                                <td class="whitespace-nowrap text-[11px]">ARC-001</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 14:30:00</td>
+                                <td class="whitespace-nowrap text-[11px]">--</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">45.2 GB</td>
+                                <td class="whitespace-nowrap text-[11px]">420</td>
+                                <td class="whitespace-nowrap"><span class="status-badge archive-status-running"><i class="fa-solid fa-spinner fa-spin text-[10px]"></i>运行中</span></td>
+                                <td class="text-center whitespace-nowrap">
+                                    <button class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">监控</button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap text-[10px]">#EXEC-240114-001</td>
+                                <td class="whitespace-nowrap text-[11px]">ARC-001</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-14 02:00:10</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-14 02:38:22</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">135.8 GB</td>
+                                <td class="whitespace-nowrap text-[11px]">1,302</td>
+                                <td class="whitespace-nowrap"><span class="status-badge archive-status-completed"><i class="fa-solid fa-check text-[10px]"></i>成功</span></td>
+                                <td class="text-center whitespace-nowrap">
+                                    <button class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">查看</button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-600 whitespace-nowrap text-[10px]">#EXEC-240113-002</td>
+                                <td class="whitespace-nowrap text-[11px]">ARC-003</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-13 03:00:05</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-13 03:15:45</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">8.5 GB</td>
+                                <td class="whitespace-nowrap text-[11px]">86</td>
+                                <td class="whitespace-nowrap"><span class="status-badge archive-status-failed"><i class="fa-solid fa-xmark text-[10px]"></i>失败</span></td>
+                                <td class="text-center whitespace-nowrap">
+                                    <button class="px-2 py-1 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors">查看错误</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="px-4 py-2 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
+                        <span class="text-[11px] text-slate-500">显示最近 5 条记录，共 156 条</span>
+                        <div class="flex items-center gap-1">
+                            <button class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white disabled:opacity-50" disabled>上一页</button>
+                            <button class="px-2 py-1 text-[10px] bg-sky-500 text-white rounded">1</button>
+                            <button class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">2</button>
+                            <button class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">3</button>
+                            <button class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: 数据读取下载记录 -->
+            <div id="panel-records" class="hidden space-y-3">
+                <!-- Search Filter - 已增加操作人员和测试任务筛选条件 -->
+                <div
+                    class="glass-panel rounded-lg p-3 bg-white border border-slate-200 flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-slate-500">时间范围:</span>
+                        <input type="date" value="2024-01-01"
+                            class="text-[11px] border border-slate-200 rounded px-2 py-1 form-input w-32">
+                        <span class="text-[11px] text-slate-400">至</span>
+                        <input type="date" value="2024-01-15"
+                            class="text-[11px] border border-slate-200 rounded px-2 py-1 form-input w-32">
+                    </div>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-slate-500">操作类型:</span>
+                        <select class="text-[11px] border border-slate-200 rounded px-2 py-1 form-input bg-white w-28">
+                            <option>全部</option>
+                            <option>数据查看</option>
+                            <option>数据下载</option>
+                            <option>批量导出</option>
+                        </select>
+                    </div>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- 新增：操作人员筛选 -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-slate-500">操作人员:</span>
+                        <select class="text-[11px] border border-slate-200 rounded px-2 py-1 form-input bg-white w-32">
+                            <option>全部人员</option>
+                            <option>张管理员</option>
+                            <option>李操作员</option>
+                            <option>王数据管理员</option>
+                            <option>陈科学家</option>
+                            <option>赵访客</option>
+                        </select>
+                    </div>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- 新增：测试任务筛选 -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-slate-500">测试任务:</span>
+                        <select class="text-[11px] border border-slate-200 rounded px-2 py-1 form-input bg-white w-36">
+                            <option>全部任务</option>
+                            <option>TASK-001 太阳风观测</option>
+                            <option>TASK-002 日冕物质抛射</option>
+                            <option>TASK-003 离子分析测试</option>
+                            <option>TASK-004 磁场扫描测试</option>
+                            <option>TASK-005 X射线监测</option>
+                        </select>
+                    </div>
+                    <div class="flex-1"></div>
+                    <button
+                        class="px-3 py-1.5 bg-sky-500 text-white text-[11px] font-medium rounded hover:bg-sky-600 transition-colors">
+                        <i class="fa-solid fa-filter text-[10px] mr-1"></i>
+                        筛选查询
+                    </button>
+                </div>
+
+                <!-- Records Table - 已增加测试任务列 -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-sky-600"></i>
+                            数据操作记录明细
+                        </h3>
+                        <button class="text-[11px] text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1">
+                            <i class="fa-solid fa-download"></i>
+                            导出Excel
+                        </button>
+                    </div>
+
+                    <table class="w-full text-left border-collapse compact-table">
+                        <thead class="bg-slate-50">
+                            <tr class="border-b border-slate-200 text-[10px] text-slate-500">
+                                <th class="whitespace-nowrap">记录ID</th>
+                                <th class="whitespace-nowrap">操作时间</th>
+                                <th class="whitespace-nowrap">操作用户</th>
+                                <th class="whitespace-nowrap">操作类型</th>
+                                <!-- 新增：测试任务列 -->
+                                <th class="whitespace-nowrap">测试任务</th>
+                                <th class="whitespace-nowrap">载荷单机</th>
+                                <th class="whitespace-nowrap">数据内容</th>
+                                <th class="whitespace-nowrap">数据量</th>
+                                <th class="whitespace-nowrap">状态</th>
+                                <th class="whitespace-nowrap">IP地址</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-500 text-[10px]">#LOG-240115-001</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 14:25:33</td>
+                                <td class="whitespace-nowrap text-[11px]">李操作员</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px]">数据下载</span>
+                                </td>
+                                <!-- 新增：测试任务数据 -->
+                                <td class="whitespace-nowrap text-[11px] font-mono text-slate-600">TASK-002</td>
+                                <td class="whitespace-nowrap text-[11px]">多波段极紫外成像仪</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600">日冕物质抛射科学数据包</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">1.2 GB</td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-online">成功</span></td>
+                                <td class="whitespace-nowrap text-[10px] font-mono text-slate-500">192.168.5.42</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-500 text-[10px]">#LOG-240115-002</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 14:20:18</td>
+                                <td class="whitespace-nowrap text-[11px]">王数据管理员</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px]">批量导出</span>
+                                </td>
+                                <!-- 新增：测试任务数据 -->
+                                <td class="whitespace-nowrap text-[11px] font-mono text-slate-600">TASK-001</td>
+                                <td class="whitespace-nowrap text-[11px]">磁场速度场成像仪</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600">2024-01-14 全天数据归档</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">8.5 GB</td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-online">成功</span></td>
+                                <td class="whitespace-nowrap text-[10px] font-mono text-slate-500">192.168.5.15</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-500 text-[10px]">#LOG-240115-003</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 14:15:42</td>
+                                <td class="whitespace-nowrap text-[11px]">陈科学家</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px]">数据查看</span>
+                                </td>
+                                <!-- 新增：测试任务数据 -->
+                                <td class="whitespace-nowrap text-[11px] font-mono text-slate-600">TASK-005</td>
+                                <td class="whitespace-nowrap text-[11px]">X射线成像望远镜</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600">X射线暴监测预览图像</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">--</td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-online">成功</span></td>
+                                <td class="whitespace-nowrap text-[10px] font-mono text-slate-500">192.168.5.88</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-500 text-[10px]">#LOG-240115-004</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 14:10:05</td>
+                                <td class="whitespace-nowrap text-[11px]">赵访客</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px]">数据下载</span>
+                                </td>
+                                <!-- 新增：测试任务数据 -->
+                                <td class="whitespace-nowrap text-[11px] font-mono text-slate-600">TASK-003</td>
+                                <td class="whitespace-nowrap text-[11px]">白光日冕仪</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600">离子分析测试示例数据</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">256 MB</td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-warning">权限不足</span></td>
+                                <td class="whitespace-nowrap text-[10px] font-mono text-slate-500">192.168.5.102</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="font-mono text-slate-500 text-[10px]">#LOG-240115-005</td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 14:05:37</td>
+                                <td class="whitespace-nowrap text-[11px]">张管理员</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px]">系统备份</span>
+                                </td>
+                                <!-- 新增：测试任务数据 -->
+                                <td class="whitespace-nowrap text-[11px] font-mono text-slate-600">全库</td>
+                                <td class="whitespace-nowrap text-[11px]">全部载荷</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600">数据库完整导出归档</td>
+                                <td class="whitespace-nowrap text-[11px] font-medium">45.2 GB</td>
+                                <td class="whitespace-nowrap"><span class="status-badge status-online">成功</span></td>
+                                <td class="whitespace-nowrap text-[10px] font-mono text-slate-500">127.0.0.1</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
+                        <span class="text-[11px] text-slate-500">显示最近 5 条记录，共 128 条</span>
+                        <div class="flex items-center gap-1">
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">上一页</button>
+                            <button class="px-2 py-1 text-[10px] bg-sky-500 text-white rounded">1</button>
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">2</button>
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">...</button>
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">26</button>
+                            <button
+                                class="px-2 py-1 text-[10px] border border-slate-200 rounded hover:bg-white">下一页</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Stats -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="glass-panel rounded-lg p-3 bg-white border border-slate-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
+                                <i class="fa-solid fa-download text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-500">今日下载总量</div>
+                                <div class="text-lg font-bold text-slate-800">32.4 GB</div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-400">较昨日 +12%</div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border border-slate-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div
+                                class="w-8 h-8 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <i class="fa-solid fa-users text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-500">活跃下载用户</div>
+                                <div class="text-lg font-bold text-slate-800">8 人</div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-400">当前在线</div>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3 bg-white border border-slate-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 rounded bg-amber-50 text-amber-600 flex items-center justify-center">
+                                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-500">异常访问尝试</div>
+                                <div class="text-lg font-bold text-slate-800">3 次</div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-amber-600 font-medium">今日被拒绝</div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="text-center text-[10px] text-slate-400 pb-1 mt-4">
+                &copy; 2024 中国科学院国家空间科学中心 | 仿真数据管理系统 | NSSC, CAS
+            </footer>
+        </div>
+    </main>
+
+    <script>
+        // Submenu Toggle
+        function toggleSubmenu(element) {
+            element.classList.toggle('expanded');
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            // Hide all panels
+            document.getElementById('panel-user').classList.add('hidden');
+            document.getElementById('panel-database').classList.add('hidden');
+            document.getElementById('panel-archive').classList.add('hidden');
+            document.getElementById('panel-records').classList.add('hidden');
+
+            // Show selected panel
+            document.getElementById('panel-' + tabName).classList.remove('hidden');
+
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+
+        // System Time Update
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('systemTime').textContent = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            }).replace(/\//g, '-');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+
+</html>

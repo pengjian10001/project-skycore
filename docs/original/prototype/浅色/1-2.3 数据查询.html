@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据查询 | 仿真数据管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f1f5f9;
+            color: #334155;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item.active {
+            background-color: #f0f9ff;
+            color: #0ea5e9;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-item.sub-item {
+            padding-left: 2.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .nav-item.sub-item.active {
+            background-color: #f0f9ff;
+            color: #0284c7;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-group .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .nav-group.expanded .submenu {
+            max-height: 200px;
+        }
+
+        .nav-group.expanded .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        /* 搜索框样式 */
+        .search-input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        /* 表格样式 */
+        .data-table th {
+            background-color: #f8fafc;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        .data-table td {
+            font-size: 0.75rem;
+        }
+
+        .data-table tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* 分页样式 */
+        .pagination-btn {
+            transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background-color: #f1f5f9;
+        }
+
+        .pagination-btn.active {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 筛选标签 */
+        .filter-tag {
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-2px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 表格滚动样式 - 固定表头，tbody滚动显示6行 */
+        .table-scroll-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .table-scroll-wrapper table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-scroll-wrapper thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #f8fafc;
+        }
+
+        .table-scroll-wrapper thead th {
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table-scroll-wrapper tbody {
+            display: block;
+            max-height: 216px;
+            /* 6行 x 36px每行 */
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .table-scroll-wrapper thead tr,
+        .table-scroll-wrapper tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .table-scroll-wrapper tbody tr {
+            height: 36px;
+        }
+
+        .table-scroll-wrapper tbody::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-scroll-wrapper tbody::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .table-scroll-wrapper tbody::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .table-scroll-wrapper tbody::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+<base target="_blank">
+</head>
+
+<body class="h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm shrink-0">
+        <div class="h-14 flex items-center px-4 border-b border-slate-100">
+            <div class="w-7 h-7 bg-sky-600 rounded-md flex items-center justify-center mr-2 shadow-md shadow-sky-200">
+                <i class="fa-solid fa-satellite text-white text-xs"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-slate-800 text-xs tracking-tight">仿真数据管理</h1>
+                <p class="text-[9px] text-slate-400 uppercase tracking-wider">NSSC, CAS</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 text-sm">
+            <a href="./../首页-浅色版.html"
+                class="nav-item active flex items-center px-4 py-2.5 font-medium transition-colors hover:bg-slate-50">
+                <i class="fa-solid fa-chart-line w-5 text-xs"></i>
+                <span class="text-xs">数据实时监控</span>
+            </a>
+
+            <div class="nav-group expanded">
+                <div class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600 cursor-pointer"
+                    onclick="toggleSubmenu(this.parentElement)">
+                    <i class="fa-solid fa-database w-5 text-xs"></i>
+                    <span class="flex-1 text-xs">任务数据管理</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"></i>
+                </div>
+                <div class="submenu bg-slate-50/50">
+                    <a href="./1-2.1.任务管理.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        任务管理
+                    </a>
+                    <a href="./1-2.2.数据统计.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据统计
+                    </a>
+                    <a href="./1-2.3 数据查询.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据查询
+                    </a>
+                    <a href="./1-2.4.本地存储.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        本地存储
+                    </a>
+                </div>
+            </div>
+
+            <a href="./1-3.日志查询.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-file-code w-5 text-xs"></i>
+                <span class="text-xs">日志查询</span>
+            </a>
+
+            <a href="./1-4.系统管理.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-gear w-5 text-xs"></i>
+                <span class="text-xs">系统管理</span>
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+                <img src="https://ui-avatars.com/api/?name=Admin&background=e0f2fe&color=0ea5e9&size=32"
+                    class="w-7 h-7 rounded-full border border-slate-200">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-slate-900 truncate">系统管理员</p>
+                    <p class="text-[10px] text-slate-500 truncate">在线</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50/50 overflow-hidden">
+
+        <!-- Top Header -->
+        <header
+            class="bg-white border-b border-slate-200 h-12 flex items-center justify-between px-4 shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-slate-800 mr-2">数据查询</h2>
+                <span class="text-xs text-slate-500">载荷数据检索与分析</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button class="text-[10px] text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-download"></i> 导出结果
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
+            <!-- 综合查询区域 -->
+            <div class="glass-panel rounded-lg p-4 bg-white border border-slate-200">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fa-solid fa-magnifying-glass text-sky-500 text-xs"></i>
+                    <h3 class="text-xs font-bold text-slate-800">综合查询</h3>
+                </div>
+
+                <!-- 搜索输入框 -->
+                <div class="flex gap-3 mb-3">
+                    <div class="flex-1 relative">
+                        <input type="text" id="searchInput" placeholder="请输入查询关键词（支持：任务ID、指令名称、仪器名称、数据类型等）..."
+                            class="search-input w-full px-3 py-2 text-xs border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400">
+                        <button class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-sky-500">
+                            <i class="fa-solid fa-search text-xs"></i>
+                        </button>
+                    </div>
+                    <button onclick="performSearch()"
+                        class="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-xs font-medium rounded-lg transition-colors">
+                        查询
+                    </button>
+                    <button onclick="resetSearch()"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-lg transition-colors">
+                        重置
+                    </button>
+                </div>
+
+                <!-- 高级筛选 -->
+                <div class="flex flex-wrap items-center gap-2 text-[11px]">
+                    <span class="text-slate-500">筛选条件：</span>
+
+                    <!-- 1. 载荷单机 -->
+                    <select id="filterInstrument"
+                        class="px-2 py-1 border border-slate-200 rounded text-slate-600 bg-white hover:border-sky-300 focus:outline-none focus:border-sky-500">
+                        <option value="">载荷单机</option>
+                        <option value="磁场速度场成像仪">磁场速度场成像仪</option>
+                        <option value="多波段极紫外成像仪">多波段极紫外成像仪</option>
+                        <option value="全日面极紫外光谱仪">全日面极紫外光谱仪</option>
+                        <option value="白光日冕仪">白光日冕仪</option>
+                        <option value="日球成像仪">日球成像仪</option>
+                        <option value="X射线成像望远镜">X射线成像望远镜</option>
+                        <option value="太阳风离子质谱分析仪">太阳风离子质谱分析仪</option>
+                        <option value="太阳风离子阻滞势分析仪">太阳风离子阻滞势分析仪</option>
+                        <option value="磁强计">磁强计</option>
+                    </select>
+
+                    <!-- 2. 数据类型 -->
+                    <select id="filterType"
+                        class="px-2 py-1 border border-slate-200 rounded text-slate-600 bg-white hover:border-sky-300 focus:outline-none focus:border-sky-500">
+                        <option value="">数据类型</option>
+                        <option value="science">科学数据</option>
+                        <option value="telemetry">遥测数据</option>
+                        <option value="engineering">工程参数</option>
+                    </select>
+
+                    <!-- 3. 时间段 -->
+                    <input type="date" id="filterDateStart"
+                        class="px-2 py-1 border border-slate-200 rounded text-slate-600 bg-white text-[11px]">
+                    <span class="text-slate-400">至</span>
+                    <input type="date" id="filterDateEnd"
+                        class="px-2 py-1 border border-slate-200 rounded text-slate-600 bg-white text-[11px]">
+
+                    <!-- 4. 任务类型 -->
+                    <select id="filterTaskType"
+                        class="px-2 py-1 border border-slate-200 rounded text-slate-600 bg-white hover:border-sky-300 focus:outline-none focus:border-sky-500">
+                        <option value="">任务类型</option>
+                        <option value="ground">地面测试</option>
+                        <option value="orbit">在轨运行仿真</option>
+                    </select>
+
+                    <!-- 5. 测试任务 -->
+                    <select id="filterTask"
+                        class="px-2 py-1 border border-slate-200 rounded text-slate-600 bg-white hover:border-sky-300 focus:outline-none focus:border-sky-500">
+                        <option value="">测试任务</option>
+                        <option value="太阳风观测">太阳风观测</option>
+                        <option value="日冕物质抛射">日冕物质抛射</option>
+                        <option value="太阳风离子分析">太阳风离子分析</option>
+                        <option value="极紫外光谱分析">极紫外光谱分析</option>
+                        <option value="多波段成像测试">多波段成像测试</option>
+                        <option value="磁场扫描测试">磁场扫描测试</option>
+                        <option value="日冕成像测试">日冕成像测试</option>
+                        <option value="离子质谱分析">离子质谱分析</option>
+                    </select>
+
+                    <!-- 6. 处理状态 -->
+                    <select id="filterStatus"
+                        class="px-2 py-1 border border-slate-200 rounded text-slate-600 bg-white hover:border-sky-300 focus:outline-none focus:border-sky-500">
+                        <option value="">处理状态</option>
+                        <option value="parsing">解析下发中</option>
+                        <option value="processing">处理中</option>
+                        <option value="returning">数据回传中</option>
+                        <option value="completed">已完成</option>
+                    </select>
+                </div>
+
+                <!-- 已选筛选标签 -->
+                <div id="activeFilters" class="flex flex-wrap items-center gap-2 mt-3 min-h-[24px]">
+                    <!-- 动态添加筛选标签 -->
+                </div>
+            </div>
+
+            <!-- 数据列表区域 -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
+                <!-- 列表头部信息 -->
+                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-xs font-bold text-slate-800">载荷数据列表</h3>
+                        <span class="text-[10px] text-slate-500">共 <span id="totalCount"
+                                class="font-bold text-slate-700">128</span> 条记录</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-500">每页显示：</span>
+                        <select id="pageSize" onchange="changePageSize()"
+                            class="px-2 py-1 border border-slate-200 rounded text-[10px] text-slate-600 bg-white">
+                            <option value="10" selected>10条</option>
+                            <option value="20">20条</option>
+                            <option value="50">50条</option>
+                            <option value="100">100条</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 数据表格 -->
+                <div class="table-scroll-wrapper overflow-x-auto">
+                    <table class="w-full data-table">
+                        <thead>
+                            <tr class="border-b border-slate-200">
+                                <th class="px-4 py-3 text-left whitespace-nowrap">
+                                    <input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-500 focus:ring-sky-500">
+                                </th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap cursor-pointer hover:text-sky-600"
+                                    onclick="sortTable('id')">
+                                    任务ID <i class="fa-solid fa-sort text-slate-300 text-[10px]"></i>
+                                </th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap">指令名称</th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap">仪器来源</th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap">任务类型</th>
+                                <!-- 新增：测试任务列 -->
+                                <th class="px-4 py-3 text-left whitespace-nowrap">测试任务</th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap">数据类型</th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap cursor-pointer hover:text-sky-600"
+                                    onclick="sortTable('time')">
+                                    接收时间 <i class="fa-solid fa-sort text-slate-300 text-[10px]"></i>
+                                </th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap">数据量</th>
+                                <th class="px-4 py-3 text-left whitespace-nowrap">处理状态</th>
+                                <th class="px-4 py-3 text-center whitespace-nowrap">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody" class="divide-y divide-slate-100">
+                            <!-- 数据行将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分页 -->
+                <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div class="text-[11px] text-slate-500">
+                        显示第 <span id="startRow" class="font-medium text-slate-700">1</span> - <span id="endRow"
+                            class="font-medium text-slate-700">10</span> 条，共 <span id="totalRows"
+                            class="font-medium text-slate-700">128</span> 条
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="goToPage(1)"
+                            class="pagination-btn px-2 py-1 border border-slate-200 rounded text-[11px] text-slate-600">
+                            <i class="fa-solid fa-angles-left"></i>
+                        </button>
+                        <button onclick="goToPage(currentPage - 1)" id="prevBtn"
+                            class="pagination-btn px-2 py-1 border border-slate-200 rounded text-[11px] text-slate-600">
+                            <i class="fa-solid fa-angle-left"></i>
+                        </button>
+
+                        <div id="pageNumbers" class="flex items-center gap-1">
+                            <!-- 页码动态生成 -->
+                        </div>
+
+                        <button onclick="goToPage(currentPage + 1)" id="nextBtn"
+                            class="pagination-btn px-2 py-1 border border-slate-200 rounded text-[11px] text-slate-600">
+                            <i class="fa-solid fa-angle-right"></i>
+                        </button>
+                        <button onclick="goToPage(totalPages)"
+                            class="pagination-btn px-2 py-1 border border-slate-200 rounded text-[11px] text-slate-600">
+                            <i class="fa-solid fa-angles-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="text-center text-[10px] text-slate-400 mt-4 pb-2">
+                &copy; 2024 中国科学院国家空间科学中心 | 仿真数据管理系统 | NSSC, CAS
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        // 测试任务列表
+        const taskNames = ['太阳风观测', '日冕物质抛射', '太阳风离子分析', '极紫外光谱分析', '多波段成像测试', '磁场扫描测试', '日冕成像测试', '离子质谱分析'];
+
+        // 模拟数据 - 添加测试任务字段和任务类型字段
+        const mockData = [
+            { id: 'CMD-2025-001', name: '观测模式切换', instrument: '磁场速度场成像仪', taskType: 'ground', taskTypeName: '地面测试', task: '太阳风观测', type: 'science', typeName: '科学数据', time: '2025-01-15 10:42:05', size: '980.5 MB', status: 'completed', statusName: '已完成' },
+            { id: 'CMD-2025-002', name: '波段选择', instrument: '多波段极紫外成像仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '日冕物质抛射', type: 'science', typeName: '科学数据', time: '2025-01-15 10:42:12', size: '285.6 MB', status: 'parsing', statusName: '解析下发中' },
+            { id: 'CMD-2025-003', name: '光栅位置设置', instrument: '全日面极紫外光谱仪', taskType: 'ground', taskTypeName: '地面测试', task: '极紫外光谱分析', type: 'science', typeName: '科学数据', time: '2025-01-15 10:42:18', size: '42.3 MB', status: 'processing', statusName: '处理中' },
+            { id: 'CMD-2025-004', name: '视场选择', instrument: '白光日冕仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '日冕物质抛射', type: 'science', typeName: '科学数据', time: '2025-01-15 10:42:25', size: '156.8 MB', status: 'returning', statusName: '数据回传中' },
+            { id: 'CMD-2025-005', name: '相机选择', instrument: '日球成像仪', taskType: 'ground', taskTypeName: '地面测试', task: '多波段成像测试', type: 'telemetry', typeName: '遥测数据', time: '2025-01-15 10:42:33', size: '320.4 MB', status: 'completed', statusName: '已完成' },
+            { id: 'CMD-2025-006', name: '能段选择', instrument: 'X射线成像望远镜', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '日冕物质抛射', type: 'science', typeName: '科学数据', time: '2025-01-15 10:42:41', size: '128.2 MB', status: 'processing', statusName: '处理中' },
+            { id: 'CMD-2025-007', name: '能量范围设置', instrument: '太阳风离子质谱分析仪', taskType: 'ground', taskTypeName: '地面测试', task: '太阳风离子分析', type: 'engineering', typeName: '工程参数', time: '2025-01-15 10:42:48', size: '45.6 MB', status: 'parsing', statusName: '解析下发中' },
+            { id: 'CMD-2025-008', name: '粒子类型设置', instrument: '太阳风离子阻滞势分析仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '离子质谱分析', type: 'engineering', typeName: '工程参数', time: '2025-01-15 10:42:55', size: '28.4 MB', status: 'returning', statusName: '数据回传中' },
+            { id: 'CMD-2025-009', name: '磁场校准', instrument: '磁强计', taskType: 'ground', taskTypeName: '地面测试', task: '磁场扫描测试', type: 'engineering', typeName: '工程参数', time: '2025-01-15 10:43:02', size: '15.2 MB', status: 'completed', statusName: '已完成' },
+            { id: 'CMD-2025-010', name: '温度监控', instrument: '磁场速度场成像仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '太阳风观测', type: 'telemetry', typeName: '遥测数据', time: '2025-01-15 10:43:09', size: '8.5 MB', status: 'parsing', statusName: '解析下发中' },
+            { id: 'CMD-2024-089', name: '全日面扫描', instrument: '多波段极紫外成像仪', taskType: 'ground', taskTypeName: '地面测试', task: '多波段成像测试', type: 'science', typeName: '科学数据', time: '2024-12-28 14:22:15', size: '850.2 MB', status: 'processing', statusName: '处理中' },
+            { id: 'CMD-2024-090', name: '光谱数据采集', instrument: '全日面极紫外光谱仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '极紫外光谱分析', type: 'science', typeName: '科学数据', time: '2024-12-28 14:22:22', size: '248.5 MB', status: 'returning', statusName: '数据回传中' },
+            { id: 'CMD-2024-091', name: '日冕观测', instrument: '白光日冕仪', taskType: 'ground', taskTypeName: '地面测试', task: '日冕成像测试', type: 'science', typeName: '科学数据', time: '2024-12-28 14:22:29', size: '38.6 MB', status: 'completed', statusName: '已完成' },
+            { id: 'CMD-2024-092', name: '深空成像', instrument: '日球成像仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '多波段成像测试', type: 'science', typeName: '科学数据', time: '2024-12-28 14:22:36', size: '512.3 MB', status: 'parsing', statusName: '解析下发中' },
+            { id: 'CMD-2024-093', name: 'X射线爆发监测', instrument: 'X射线成像望远镜', taskType: 'ground', taskTypeName: '地面测试', task: '日冕物质抛射', type: 'science', typeName: '科学数据', time: '2024-12-28 14:22:43', size: '64.8 MB', status: 'processing', statusName: '处理中' },
+            { id: 'CMD-2024-094', name: '太阳风速度测量', instrument: '太阳风离子质谱分析仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '太阳风离子分析', type: 'telemetry', typeName: '遥测数据', time: '2024-12-28 14:22:50', size: '32.4 MB', status: 'returning', statusName: '数据回传中' },
+            { id: 'CMD-2024-095', name: '电位分析', instrument: '太阳风离子阻滞势分析仪', taskType: 'ground', taskTypeName: '地面测试', task: '离子质谱分析', type: 'engineering', typeName: '工程参数', time: '2024-12-28 14:22:57', size: '18.6 MB', status: 'completed', statusName: '已完成' },
+            { id: 'CMD-2024-096', name: '磁场强度记录', instrument: '磁强计', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '磁场扫描测试', type: 'telemetry', typeName: '遥测数据', time: '2024-12-28 14:23:04', size: '12.3 MB', status: 'parsing', statusName: '解析下发中' },
+            { id: 'CMD-2024-097', name: '系统状态检查', instrument: '磁场速度场成像仪', taskType: 'ground', taskTypeName: '地面测试', task: '太阳风观测', type: 'engineering', typeName: '工程参数', time: '2024-12-28 14:23:11', size: '5.8 MB', status: 'processing', statusName: '处理中' },
+            { id: 'CMD-2024-098', name: '数据同步测试', instrument: '多波段极紫外成像仪', taskType: 'orbit', taskTypeName: '在轨运行仿真', task: '多波段成像测试', type: 'telemetry', typeName: '遥测数据', time: '2024-12-28 14:23:18', size: '22.1 MB', status: 'returning', statusName: '数据回传中' },
+        ];
+
+        // 生成更多模拟数据（添加测试任务字段和任务类型字段）
+        for (let i = 21; i <= 128; i++) {
+            const years = ['2025', '2024', '2023', '2022'];
+            const instruments = ['磁场速度场成像仪', '多波段极紫外成像仪', '全日面极紫外光谱仪', '白光日冕仪', '日球成像仪', 'X射线成像望远镜', '太阳风离子质谱分析仪', '太阳风离子阻滞势分析仪', '磁强计'];
+            const types = [
+                { code: 'science', name: '科学数据' },
+                { code: 'telemetry', name: '遥测数据' },
+                { code: 'engineering', name: '工程参数' }
+            ];
+            const statuses = [
+                { code: 'completed', name: '已完成', class: 'bg-green-100 text-green-700' },
+                { code: 'processing', name: '处理中', class: 'bg-blue-100 text-blue-700' },
+                { code: 'parsing', name: '解析下发中', class: 'bg-purple-100 text-purple-700' },
+                { code: 'returning', name: '数据回传中', class: 'bg-amber-100 text-amber-700' }
+            ];
+            const taskTypes = [
+                { code: 'ground', name: '地面测试' },
+                { code: 'orbit', name: '在轨运行仿真' }
+            ];
+
+            const year = years[Math.floor(Math.random() * years.length)];
+            const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+            const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
+            const taskType = taskTypes[Math.floor(Math.random() * taskTypes.length)];
+
+            mockData.push({
+                id: `CMD-${year}-${String(i).padStart(3, '0')}`,
+                name: `数据采集任务-${i}`,
+                instrument: instruments[Math.floor(Math.random() * instruments.length)],
+                taskType: taskType.code,
+                taskTypeName: taskType.name,
+                task: taskNames[Math.floor(Math.random() * taskNames.length)],
+                type: types[Math.floor(Math.random() * types.length)].code,
+                typeName: types[Math.floor(Math.random() * types.length)].name,
+                time: `${year}-${month}-${day} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
+                size: `${(Math.random() * 1000).toFixed(1)} MB`,
+                status: statuses[Math.floor(Math.random() * statuses.length)].code,
+                statusName: statuses[Math.floor(Math.random() * statuses.length)].name
+            });
+        }
+
+        // 分页状态
+        let currentPage = 1;
+        let pageSize = 10;
+        let filteredData = [...mockData];
+        let totalPages = Math.ceil(filteredData.length / pageSize);
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            renderTable();
+            renderPagination();
+            setupFilterListeners();
+        });
+
+        // 渲染表格 - 添加任务类型列显示
+        function renderTable() {
+            const tbody = document.getElementById('dataTableBody');
+            const start = (currentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, filteredData.length);
+            const pageData = filteredData.slice(start, end);
+
+            tbody.innerHTML = pageData.map(row => {
+                const statusClass = row.status === 'completed' ? 'bg-green-100 text-green-700' :
+                    row.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        row.status === 'parsing' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700';
+
+                const typeClass = row.type === 'science' ? 'bg-blue-50 text-blue-700' :
+                    row.type === 'telemetry' ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700';
+
+                return `
+                    <tr class="transition-colors hover:bg-slate-50">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-slate-300 text-sky-500 focus:ring-sky-500">
+                        </td>
+                        <td class="px-4 py-3 font-mono text-slate-600">${row.id}</td>
+                        <td class="px-4 py-3 font-medium text-slate-800">${row.name}</td>
+                        <td class="px-4 py-3">
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600">${row.instrument}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-[10px] px-2 py-0.5 rounded ${row.taskType === 'ground' ? 'bg-amber-50 text-amber-700' : 'bg-cyan-50 text-cyan-700'}">${row.taskTypeName}</span>
+                        </td>
+                        <!-- 新增：测试任务列 -->
+                        <td class="px-4 py-3">
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">${row.task}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-[10px] px-2 py-0.5 rounded ${typeClass}">${row.typeName}</span>
+                        </td>
+                        <td class="px-4 py-3 text-slate-500">${row.time}</td>
+                        <td class="px-4 py-3 font-mono text-slate-700">${row.size}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${statusClass}">
+                                <span class="w-1 h-1 rounded-full ${row.status === 'completed' ? 'bg-green-500' : row.status === 'processing' ? 'bg-blue-500 animate-pulse' : row.status === 'parsing' ? 'bg-purple-500 animate-pulse' : 'bg-amber-500 animate-pulse'}"></span>
+                                ${row.statusName}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button class="inline-flex items-center gap-1 px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors mr-1" title="查看详情">
+                                <i class="fa-solid fa-eye"></i> 详情
+                            </button>
+                            ${row.status === 'completed' ? `
+                            <button class="inline-flex items-center gap-1 px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors" title="导出数据">
+                                <i class="fa-solid fa-download"></i> 数据下载
+                            </button>
+                            ` : `
+                            <button class="inline-flex items-center gap-1 px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors opacity-50 cursor-not-allowed" title="数据未就绪" disabled>
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 更新分页信息
+            document.getElementById('startRow').textContent = filteredData.length > 0 ? start + 1 : 0;
+            document.getElementById('endRow').textContent = end;
+            document.getElementById('totalRows').textContent = filteredData.length;
+            document.getElementById('totalCount').textContent = filteredData.length;
+        }
+
+        // 渲染分页
+        function renderPagination() {
+            totalPages = Math.ceil(filteredData.length / pageSize);
+            const pageNumbers = document.getElementById('pageNumbers');
+
+            let html = '';
+            const maxVisible = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+            if (endPage - startPage < maxVisible - 1) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button onclick="goToPage(${i})" class="pagination-btn px-2.5 py-1 border border-slate-200 rounded text-[11px] ${i === currentPage ? 'active' : 'text-slate-600'}">${i}</button>`;
+            }
+
+            pageNumbers.innerHTML = html;
+
+            // 更新按钮状态
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
+
+        // 跳转页面
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderTable();
+            renderPagination();
+        }
+
+        // 改变每页数量
+        function changePageSize() {
+            pageSize = parseInt(document.getElementById('pageSize').value);
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+        }
+
+        // 执行搜索 - 调整筛选逻辑顺序，添加时间段筛选
+        function performSearch() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const instrument = document.getElementById('filterInstrument').value;
+            const type = document.getElementById('filterType').value;
+            const dateStart = document.getElementById('filterDateStart').value;
+            const dateEnd = document.getElementById('filterDateEnd').value;
+            const taskType = document.getElementById('filterTaskType').value;
+            const task = document.getElementById('filterTask').value;
+            const status = document.getElementById('filterStatus').value;
+
+            filteredData = mockData.filter(row => {
+                const matchKeyword = !keyword ||
+                    row.id.toLowerCase().includes(keyword) ||
+                    row.name.toLowerCase().includes(keyword) ||
+                    row.instrument.toLowerCase().includes(keyword) ||
+                    row.task.toLowerCase().includes(keyword);
+
+                const matchInstrument = !instrument || row.instrument === instrument;
+                const matchType = !type || row.type === type;
+
+                // 时间段筛选逻辑
+                let matchDate = true;
+                if (dateStart) {
+                    matchDate = matchDate && row.time >= dateStart + ' 00:00:00';
+                }
+                if (dateEnd) {
+                    matchDate = matchDate && row.time <= dateEnd + ' 23:59:59';
+                }
+
+                const matchTaskType = !taskType || row.taskType === taskType;
+                const matchTask = !task || row.task === task;
+                const matchStatus = !status || row.status === status;
+
+                return matchKeyword && matchInstrument && matchType && matchDate && matchTaskType && matchTask && matchStatus;
+            });
+
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+            updateActiveFilters();
+        }
+
+        // 重置搜索
+        function resetSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterInstrument').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterDateStart').value = '';
+            document.getElementById('filterDateEnd').value = '';
+            document.getElementById('filterTaskType').value = '';
+            document.getElementById('filterTask').value = '';
+            document.getElementById('filterStatus').value = '';
+
+            filteredData = [...mockData];
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+            updateActiveFilters();
+        }
+
+        // 设置筛选监听器 - 调整顺序，移除年份监听，添加日期监听
+        function setupFilterListeners() {
+            const filters = ['filterInstrument', 'filterType', 'filterTaskType', 'filterTask', 'filterStatus'];
+            filters.forEach(id => {
+                document.getElementById(id).addEventListener('change', performSearch);
+            });
+
+            // 日期输入框监听
+            document.getElementById('filterDateStart').addEventListener('change', performSearch);
+            document.getElementById('filterDateEnd').addEventListener('change', performSearch);
+
+            document.getElementById('searchInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') performSearch();
+            });
+        }
+
+        // 更新已选筛选标签 - 调整顺序，移除年份，添加时间段
+        function updateActiveFilters() {
+            const container = document.getElementById('activeFilters');
+            const filters = [];
+
+            const instrument = document.getElementById('filterInstrument').value;
+            if (instrument) filters.push({ label: instrument, key: 'instrument' });
+
+            const type = document.getElementById('filterType').value;
+            if (type) {
+                const typeNames = { science: '科学数据', telemetry: '遥测数据', engineering: '工程参数' };
+                filters.push({ label: typeNames[type], key: 'type' });
+            }
+
+            const dateStart = document.getElementById('filterDateStart').value;
+            const dateEnd = document.getElementById('filterDateEnd').value;
+            if (dateStart || dateEnd) {
+                let dateLabel = '';
+                if (dateStart && dateEnd) {
+                    dateLabel = `${dateStart} 至 ${dateEnd}`;
+                } else if (dateStart) {
+                    dateLabel = `自 ${dateStart}`;
+                } else {
+                    dateLabel = `至 ${dateEnd}`;
+                }
+                filters.push({ label: dateLabel, key: 'dateRange' });
+            }
+
+            const taskType = document.getElementById('filterTaskType').value;
+            if (taskType) {
+                const taskTypeNames = { ground: '地面测试', orbit: '在轨运行仿真' };
+                filters.push({ label: taskTypeNames[taskType], key: 'taskType' });
+            }
+
+            const task = document.getElementById('filterTask').value;
+            if (task) filters.push({ label: task, key: 'task' });
+
+            const status = document.getElementById('filterStatus').value;
+            if (status) {
+                const statusNames = { completed: '已完成', processing: '处理中', parsing: '解析下发中', returning: '数据回传中' };
+                filters.push({ label: statusNames[status], key: 'status' });
+            }
+
+            if (filters.length === 0) {
+                container.innerHTML = '<span class="text-[11px] text-slate-400">暂无筛选条件</span>';
+            } else {
+                container.innerHTML = filters.map(f => `
+                    <span class="filter-tag inline-flex items-center gap-1 px-2 py-1 bg-sky-50 text-sky-700 text-[10px] rounded border border-sky-200">
+                        ${f.label}
+                        <button onclick="clearFilter('${f.key}')" class="hover:text-sky-900">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        // 清除单个筛选 - 调整映射，移除年份，添加时间段
+        function clearFilter(key) {
+            const map = { 
+                instrument: 'filterInstrument', 
+                type: 'filterType', 
+                taskType: 'filterTaskType', 
+                task: 'filterTask', 
+                status: 'filterStatus' 
+            };
+
+            if (key === 'dateRange') {
+                document.getElementById('filterDateStart').value = '';
+                document.getElementById('filterDateEnd').value = '';
+            } else if (map[key]) {
+                document.getElementById(map[key]).value = '';
+            }
+
+            performSearch();
+        }
+
+        // 排序
+        let sortField = '';
+        let sortOrder = 'asc';
+        function sortTable(field) {
+            if (sortField === field) {
+                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortOrder = 'asc';
+            }
+
+            filteredData.sort((a, b) => {
+                let valA = a[field];
+                let valB = b[field];
+
+                if (field === 'time') {
+                    valA = new Date(valA);
+                    valB = new Date(valB);
+                }
+
+                if (sortOrder === 'asc') {
+                    return valA > valB ? 1 : -1;
+                } else {
+                    return valA < valB ? 1 : -1;
+                }
+            });
+
+            renderTable();
+        }
+
+        // 子菜单切换
+        function toggleSubmenu(element) {
+            element.classList.toggle('expanded');
+        }
+    </script>
+
+</body>
+
+</html>

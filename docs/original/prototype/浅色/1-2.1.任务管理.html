@@ -1,0 +1,2574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理 | 仿真数据管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f1f5f9;
+            color: #334155;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item.active {
+            background-color: #f0f9ff;
+            color: #0ea5e9;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-item.sub-item {
+            padding-left: 2.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .nav-item.sub-item.active {
+            background-color: #f0f9ff;
+            color: #0284c7;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-group .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .nav-group.expanded .submenu {
+            max-height: 200px;
+        }
+
+        .nav-group.expanded .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .task-row {
+            transition: all 0.15s ease;
+        }
+
+        .task-row:hover {
+            background-color: #f8fafc;
+        }
+
+        .compact-table th,
+        .compact-table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .compact-table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .progress-bar-bg {
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+        }
+
+        .type-badge-ground {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .type-badge-orbit {
+            background-color: #fce7f3;
+            color: #be185d;
+        }
+
+        .status-waiting {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-running {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            background-color: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .form-input {
+            transition: all 0.2s;
+            border: 1px solid #cbd5e1;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .instrument-checkbox:checked+div {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        .btn-primary {
+            background-color: #0ea5e9;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #0284c7;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+        }
+
+        .task-type-radio:checked+span {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        /* 图表容器样式 */
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            min-height: 300px;
+            position: relative;
+        }
+
+        .chart-container-small {
+            width: 100%;
+            height: 260px;
+            min-height: 260px;
+            position: relative;
+        }
+
+        #timeBarChart {
+            height: 480px;
+            min-height: 480px;
+        }
+
+        #taskDataBarChart {
+            height: 340px;
+            min-height: 340px;
+        }
+
+        .dimension-radio:checked+span {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        .dimension-radio:checked+span span:first-child {
+            background-color: white;
+        }
+
+        /* 表格滚动样式 - 新增 */
+        .table-container {
+            max-height: 210px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        thead.sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm shrink-0">
+        <div class="h-14 flex items-center px-4 border-b border-slate-100">
+            <div class="w-7 h-7 bg-sky-600 rounded-md flex items-center justify-center mr-2 shadow-md shadow-sky-200">
+                <i class="fa-solid fa-satellite text-white text-xs"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-slate-800 text-xs tracking-tight">仿真数据管理</h1>
+                <p class="text-[9px] text-slate-400 uppercase tracking-wider">NSSC, CAS</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 text-sm">
+            <a href="./../首页-浅色版.html"
+                class="nav-item flex items-center px-4 py-2.5 font-medium transition-colors hover:bg-slate-50">
+                <i class="fa-solid fa-chart-line w-5 text-xs"></i>
+                <span class="text-xs">数据实时监控</span>
+            </a>
+
+            <div class="nav-group expanded">
+                <div class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600 cursor-pointer"
+                    onclick="toggleSubmenu(this.parentElement)">
+                    <i class="fa-solid fa-database w-5 text-xs"></i>
+                    <span class="flex-1 text-xs">任务数据管理</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"></i>
+                </div>
+                <div class="submenu bg-slate-50/50">
+                    <a href="./1-2.1.任务管理.html"
+                        class="nav-item sub-item active flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        任务管理
+                    </a>
+                    <a href="./1-2.2.数据统计.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据统计
+                    </a>
+                    <a href="./1-2.3 数据查询.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据查询
+                    </a>
+                    <a href="./1-2.4.本地存储.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        本地存储
+                    </a>
+                </div>
+            </div>
+
+            <a href="./1-3.日志查询.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-file-code w-5 text-xs"></i>
+                <span class="text-xs">日志查询</span>
+            </a>
+
+            <a href="./1-4.系统管理.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-gear w-5 text-xs"></i>
+                <span class="text-xs">系统管理</span>
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+                <img src="https://ui-avatars.com/api/?name=Operator&background=e0f2fe&color=0ea5e9&size=32"
+                    class="w-7 h-7 rounded-full border border-slate-200">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-slate-900 truncate">测试操作员</p>
+                    <p class="text-[10px] text-slate-500 truncate">在线</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50/50 overflow-hidden">
+
+        <!-- Top Header -->
+        <header
+            class="bg-white border-b border-slate-200 h-12 flex items-center justify-between px-4 shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-slate-800 mr-2">任务管理</h2>
+                <span class="text-xs text-slate-500">管理测试任务的全生命周期</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                    <div class="text-right">
+                        <div class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">系统时间</div>
+                        <div class="text-[10px] font-mono text-sky-600 font-semibold" id="systemTime">2024-01-15
+                            10:42:05</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-4">
+
+            <!-- Search and Filter Bar -->
+            <div class="glass-panel rounded-lg p-3 mb-4 border border-slate-200">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="relative flex-1 max-w-xs">
+                            <i
+                                class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" placeholder="搜索任务ID、背景、内容..."
+                                class="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500">
+                        </div>
+                        <select
+                            class="px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 bg-white">
+                            <option value="">全部类型</option>
+                            <option value="ground">地面测试</option>
+                            <option value="orbit">在轨运行仿真</option>
+                        </select>
+                        <select
+                            class="px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 bg-white">
+                            <option value="">全部状态</option>
+                            <option value="waiting">待运行</option>
+                            <option value="running">数据生成中</option>
+                            <option value="completed">已完成</option>
+                        </select>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500 whitespace-nowrap">测试时间:</span>
+                            <input type="datetime-local"
+                                class="px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 bg-white">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openModal()"
+                            class="btn-primary px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i>新建任务
+                        </button>
+                        
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Data Volume Overview - 12个柱子的柱状图 -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4 mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-sky-500"></i>
+                        任务数据量概览 <span class="text-xs font-normal text-slate-500">（共12个任务）</span>
+                    </h3>
+                    <div class="flex items-center gap-4 text-xs text-slate-500">
+                        <span class="flex items-center gap-1"><span
+                                class="w-2 h-2 rounded-full bg-emerald-500"></span>已完成</span>
+                        <span class="flex items-center gap-1"><span
+                                class="w-2 h-2 rounded-full bg-blue-500"></span>数据生成中</span>
+                        <span class="flex items-center gap-1"><span
+                                class="w-2 h-2 rounded-full bg-slate-400"></span>待运行/无数据</span>
+                    </div>
+                </div>
+                <div id="taskDataBarChart" class="chart-container"></div>
+                <p class="text-[10px] text-slate-400 mt-2 text-center">图表展示12个任务的数据量或状态，与下方列表数据一一对应，点击柱状图可定位到列表行</p>
+            </div>
+
+            <!-- Task List Table - 12个任务 -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden mb-4">
+                <div class="table-container overflow-x-auto">
+                    <table class="w-full text-left border-collapse compact-table">
+                        <thead class="bg-slate-50 border-b border-slate-200 sticky-header">
+                            <tr class="text-[10px] text-slate-500">
+                                <th class="whitespace-nowrap w-10"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></th>
+                                <th class="whitespace-nowrap">任务ID</th>
+                                <th class="whitespace-nowrap">任务背景</th>
+                                <th class="whitespace-nowrap">任务内容</th>
+                                <th class="whitespace-nowrap">任务类型</th>
+                                <th class="whitespace-nowrap">包含载荷</th>
+                                <th class="whitespace-nowrap">测试时间</th>
+                                <th class="whitespace-nowrap">测试人员</th>
+                                <th class="whitespace-nowrap">创建时间</th>
+                                <th class="whitespace-nowrap">状态</th>
+                                <th class="whitespace-nowrap">进度</th>
+                                <th class="whitespace-nowrap text-right">数据量</th>
+                                <th class="whitespace-nowrap text-center w-40">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            <tr class="task-row" data-task-id="TASK-001" data-volume="2.4" data-status="completed"
+                                data-type="ground">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-001</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">太阳风观测</td>
+                                <td class="whitespace-nowrap text-slate-600">全日面磁场扫描</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-2 py-0.5 rounded-full font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">7个载荷单机</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 08:00</td>
+                                <td class="whitespace-nowrap text-[11px]">张工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 16:30</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-completed"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 "></span>已完成</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">2.4 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情" onclick="openTaskDetailModal('TASK-001', '太阳风观测', 'ground')"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-002" data-volume="1.8" data-status="running"
+                                data-type="orbit">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-002</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">日冕物质抛射</td>
+                                <td class="whitespace-nowrap text-slate-600">白光日冕成像</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-2 py-0.5 rounded-full font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">9载荷+PMU</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 09:30</td>
+                                <td class="whitespace-nowrap text-[11px]">李工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 18:00</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-running"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>数据生成中</span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-blue-500" style="width: 65%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">65%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">1.8 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情" onclick="openTaskDetailModal('TASK-002', '日冕物质抛射', 'orbit')"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-003" data-volume="0" data-status="waiting"
+                                data-type="ground">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-003</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">太阳风离子分析</td>
+                                <td class="whitespace-nowrap text-slate-600">离子质谱扫描</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-2 py-0.5 rounded-full font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">7个载荷单机</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 10:00</td>
+                                <td class="whitespace-nowrap text-[11px]">王工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 20:15</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-waiting"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-amber-500 "></span>待运行</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-slate-300" style="width: 0%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">0%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-400 whitespace-nowrap text-[11px]">--
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-400 cursor-not-allowed rounded transition-colors"
+                                            title="数据未就绪" disabled><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-004" data-volume="1.2" data-status="completed"
+                                data-type="orbit">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-004</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">极紫外光谱分析</td>
+                                <td class="whitespace-nowrap text-slate-600">谱线扫描观测</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-2 py-0.5 rounded-full font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">9载荷+PMU</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 09:45</td>
+                                <td class="whitespace-nowrap text-[11px]">周工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 15:45</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-completed"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 "></span>已完成</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">1.2 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-005" data-volume="3.1" data-status="completed"
+                                data-type="ground">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-005</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">多波段成像测试</td>
+                                <td class="whitespace-nowrap text-slate-600">极紫外成像序列</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-2 py-0.5 rounded-full font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">7个载荷单机</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 08:30</td>
+                                <td class="whitespace-nowrap text-[11px]">陈工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 14:20</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-completed"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 "></span>已完成</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">3.1 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-006" data-volume="4.5" data-status="completed"
+                                data-type="ground">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-006</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">磁场强度监测</td>
+                                <td class="whitespace-nowrap text-slate-600">全日面磁场强度</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-2 py-0.5 rounded-full font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">7个载荷单机</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 11:00</td>
+                                <td class="whitespace-nowrap text-[11px]">张工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 10:00</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-completed"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 "></span>已完成</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">4.5 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-007" data-volume="0" data-status="waiting"
+                                data-type="orbit">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-007</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">太阳耀斑观测</td>
+                                <td class="whitespace-nowrap text-slate-600">X射线耀斑监测</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-2 py-0.5 rounded-full font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">9载荷+PMU</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 14:00</td>
+                                <td class="whitespace-nowrap text-[11px]">李工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 22:00</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-waiting"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-amber-500 "></span>待运行</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-slate-300" style="width: 0%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">0%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-400 whitespace-nowrap text-[11px]">--
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-400 cursor-not-allowed rounded transition-colors"
+                                            title="数据未就绪" disabled><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-008" data-volume="2.8" data-status="running"
+                                data-type="ground">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-008</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">日冕加热研究</td>
+                                <td class="whitespace-nowrap text-slate-600">极紫外温度分析</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-2 py-0.5 rounded-full font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">7个载荷单机</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 13:30</td>
+                                <td class="whitespace-nowrap text-[11px]">王工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 19:30</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-running"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>数据生成中</span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-blue-500" style="width: 65%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">65%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">2.8 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-009" data-volume="3.6" data-status="completed"
+                                data-type="orbit">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-009</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">太阳风速度测量</td>
+                                <td class="whitespace-nowrap text-slate-600">离子速度分布</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-2 py-0.5 rounded-full font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">9载荷+PMU</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 15:00</td>
+                                <td class="whitespace-nowrap text-[11px]">周工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 17:00</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-completed"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 "></span>已完成</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">3.6 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-010" data-volume="0" data-status="waiting"
+                                data-type="ground">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-010</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">色球层成像</td>
+                                <td class="whitespace-nowrap text-slate-600">H-alpha波段成像</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-2 py-0.5 rounded-full font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">7个载荷单机</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 16:00</td>
+                                <td class="whitespace-nowrap text-[11px]">陈工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 21:00</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-waiting"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-amber-500 "></span>待运行</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-slate-300" style="width: 0%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">0%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-400 whitespace-nowrap text-[11px]">--
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-400 cursor-not-allowed rounded transition-colors"
+                                            title="数据未就绪" disabled><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-011" data-volume="5.2" data-status="completed"
+                                data-type="orbit">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-011</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">日冕物质抛射追踪</td>
+                                <td class="whitespace-nowrap text-slate-600">白光日冕追踪</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-2 py-0.5 rounded-full font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">9载荷+PMU</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 17:00</td>
+                                <td class="whitespace-nowrap text-[11px]">张工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 13:00</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-completed"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 "></span>已完成</span></td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">5.2 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                            <tr class="task-row" data-task-id="TASK-012" data-volume="1.9" data-status="running"
+                                data-type="ground">
+                                <td class="py-3 px-4"><input type="checkbox"
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500"></td>
+                                <td class="font-mono text-slate-600 whitespace-nowrap">#TASK-012</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">太阳黑子观测</td>
+                                <td class="whitespace-nowrap text-slate-600">可见光成像</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-2 py-0.5 rounded-full font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-600"><span
+                                        class="text-slate-500">7个载荷单机</span></td>
+                                <td class="whitespace-nowrap text-[11px]">2024-01-15 18:00</td>
+                                <td class="whitespace-nowrap text-[11px]">李工程师</td>
+                                <td class="whitespace-nowrap text-[11px] text-slate-500">2024-01-14 20:45</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium status-running"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>数据生成中</span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-blue-500" style="width: 65%"></div>
+                                        </div><span class="text-[10px] text-slate-500 w-8">65%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-slate-800 whitespace-nowrap text-[11px]">1.9 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1"><button
+                                            class="px-2 py-1.5 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors"
+                                            title="查看详情"><i class="fa-solid fa-eye"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"
+                                            title="下载数据"><i class="fa-solid fa-download"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded hover:bg-slate-100 transition-colors"
+                                            title="编辑"><i class="fa-solid fa-pen"></i></button><button
+                                            class="px-2 py-1.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            title="删除"><i class="fa-solid fa-trash"></i></button></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div class="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+                    <div class="text-xs text-slate-500">显示 <span class="font-medium">1-12</span> 条，共 <span
+                            class="font-medium">12</span> 条</div>
+                    <div class="flex items-center gap-1">
+                        <button
+                            class="px-2 py-1 text-xs border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50"
+                            disabled><i class="fa-solid fa-chevron-left"></i></button>
+                        <button class="px-3 py-1 text-xs bg-sky-500 text-white rounded">1</button>
+                        <button
+                            class="px-2 py-1 text-xs border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50"
+                            disabled><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Section - 三个饼图布局 -->
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <!-- Pie Chart 1: Task Type Distribution (by count + volume info) -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-sky-500"></i>
+                            任务类型数量分布
+                        </h3>
+                        <span class="text-xs text-slate-400">按数量统计</span>
+                    </div>
+                    <div id="typePieChart" class="chart-container-small"></div>
+                    <div class="flex flex-col items-center text-xs text-slate-500 mt-1 space-y-1">
+                        <span class="flex items-center gap-1"><span
+                                class="w-2 h-2 rounded-full bg-blue-500"></span>地面测试: 7个任务</span>
+                        <span class="flex items-center gap-1"><span
+                                class="w-2 h-2 rounded-full bg-pink-500"></span>在轨运行仿真: 5个任务</span>
+                    </div>
+                </div>
+
+                <!-- Pie Chart 2: Ground Test Data Volume Distribution -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-blue-500"></i>
+                            地面测试数据分布
+                        </h3>
+                        <span class="text-xs text-slate-400">按数据类型</span>
+                    </div>
+                    <div id="groundDataPieChart" class="chart-container-small"></div>
+                    <div class="text-center text-xs text-slate-400 mt-1">总数据量: 14.7 GB</div>
+                </div>
+
+                <!-- Pie Chart 3: Orbit Test Data Volume Distribution -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-pink-500"></i>
+                            在轨运行仿真数据分布
+                        </h3>
+                        <span class="text-xs text-slate-400">按数据类型</span>
+                    </div>
+                    <div id="orbitDataPieChart" class="chart-container-small"></div>
+                    <div class="text-center text-xs text-slate-400 mt-1">总数据量: 11.8 GB</div>
+                </div>
+            </div>
+
+            <!-- Row 3: Gantt Chart - Task and Payload Usage Statistics -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-gantt text-sky-500"></i>
+                        测试任务与载荷使用统计
+                        <span class="text-xs font-normal text-slate-500">（甘特图）</span>
+                    </h3>
+                </div>
+
+                <!-- Month Selector -->
+                <div class="flex items-center gap-3 mb-4 flex-wrap">
+                    <span class="text-xs text-slate-500 font-medium whitespace-nowrap">选择月份：</span>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="1" class="sr-only peer" checked onchange="switchGanttMonth(1)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">1月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="2" class="sr-only peer" onchange="switchGanttMonth(2)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">2月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="3" class="sr-only peer" onchange="switchGanttMonth(3)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">3月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="4" class="sr-only peer" onchange="switchGanttMonth(4)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">4月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="5" class="sr-only peer" onchange="switchGanttMonth(5)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">5月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="6" class="sr-only peer" onchange="switchGanttMonth(6)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">6月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="7" class="sr-only peer" onchange="switchGanttMonth(7)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">7月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="8" class="sr-only peer" onchange="switchGanttMonth(8)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">8月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="9" class="sr-only peer" onchange="switchGanttMonth(9)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">9月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="10" class="sr-only peer" onchange="switchGanttMonth(10)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">10月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="11" class="sr-only peer" onchange="switchGanttMonth(11)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">11月</span>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="ganttMonth" value="12" class="sr-only peer" onchange="switchGanttMonth(12)">
+                            <span class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:text-white transition-all">12月</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="timeBarChart" class="chart-container"></div>
+                <p class="text-[10px] text-slate-400 mt-2 text-center">甘特图以测试任务为维度，每个任务内不同载荷单元独立显示（垂直分布，不同颜色代表不同载荷，可并行/串行）</p>
+            </div>
+
+            <footer class="text-center text-[10px] text-slate-400 mt-4 pb-2">
+                © 2024 中国科学院国家空间科学中心 | 仿真数据管理系统 | NSSC, CAS
+            </footer>
+        </div>
+    </main>
+
+    <!-- Chart Initialization Script -->
+    <script>
+        // ========== Charts Initialization ==========
+        let pieChart = null;
+        let groundPieChart = null;
+        let orbitPieChart = null;
+        let barChart = null;
+        let taskDataBarChart = null;
+        let currentDimension = 'month';
+
+        // 12个任务数据
+        const taskListData = [
+            { id: 'TASK-001', name: '太阳风观测', volume: 2.4, status: 'completed', type: 'ground', typeName: '地面测试' },
+            { id: 'TASK-002', name: '日冕物质抛射', volume: 1.8, status: 'running', type: 'orbit', typeName: '在轨运行仿真' },
+            { id: 'TASK-003', name: '太阳风离子分析', volume: 0, status: 'waiting', type: 'ground', typeName: '地面测试' },
+            { id: 'TASK-004', name: '极紫外光谱分析', volume: 1.2, status: 'completed', type: 'orbit', typeName: '在轨运行仿真' },
+            { id: 'TASK-005', name: '多波段成像测试', volume: 3.1, status: 'completed', type: 'ground', typeName: '地面测试' },
+            { id: 'TASK-006', name: '磁场强度监测', volume: 4.5, status: 'completed', type: 'ground', typeName: '地面测试' },
+            { id: 'TASK-007', name: '太阳耀斑观测', volume: 0, status: 'waiting', type: 'orbit', typeName: '在轨运行仿真' },
+            { id: 'TASK-008', name: '日冕加热研究', volume: 2.8, status: 'running', type: 'ground', typeName: '地面测试' },
+            { id: 'TASK-009', name: '太阳风速度测量', volume: 3.6, status: 'completed', type: 'orbit', typeName: '在轨运行仿真' },
+            { id: 'TASK-010', name: '色球层成像', volume: 0, status: 'waiting', type: 'ground', typeName: '地面测试' },
+            { id: 'TASK-011', name: '日冕物质抛射追踪', volume: 5.2, status: 'completed', type: 'orbit', typeName: '在轨运行仿真' },
+            { id: 'TASK-012', name: '太阳黑子观测', volume: 1.9, status: 'running', type: 'ground', typeName: '地面测试' }
+        ];
+
+        // 统计数据
+        const groundTasks = taskListData.filter(t => t.type === 'ground');
+        const orbitTasks = taskListData.filter(t => t.type === 'orbit');
+        const groundCount = groundTasks.length;
+        const orbitCount = orbitTasks.length;
+        const groundVolume = groundTasks.reduce((sum, t) => sum + t.volume, 0).toFixed(1);
+        const orbitVolume = orbitTasks.reduce((sum, t) => sum + t.volume, 0).toFixed(1);
+
+        // 饼图数据
+        const pieData = [
+            { value: 7, name: '地面测试', totalVolume: groundVolume, itemStyle: { color: '#3b82f6' } },
+            { value: 5, name: '在轨运行仿真', totalVolume: orbitVolume, itemStyle: { color: '#ec4899' } }
+        ];
+
+        // 地面测试数据类型分布
+        const groundDataTypes = [
+            { value: 45, name: '科学数据', itemStyle: { color: '#10b981' } },
+            { value: 25, name: '遥测数据', itemStyle: { color: '#06b6d4' } },
+            { value: 20, name: '工程参数', itemStyle: { color: '#f59e0b' } },
+            { value: 10, name: '其他数据', itemStyle: { color: '#94a3b8' } }
+        ];
+
+        // 在轨运行仿真数据类型分布
+        const orbitDataTypes = [
+            { value: 50, name: '科学数据', itemStyle: { color: '#10b981' } },
+            { value: 30, name: '遥测数据', itemStyle: { color: '#06b6d4' } },
+            { value: 15, name: '工程参数', itemStyle: { color: '#f59e0b' } },
+            { value: 5, name: '其他数据', itemStyle: { color: '#94a3b8' } }
+        ];
+
+        // ========== Gantt Chart Data (By Task with Separated Payloads) ==========
+        const monthDays = [31, 28];
+        const monthNames = ['1月', '2月'];
+
+        // 载荷单机颜色映射
+        const instrumentColors = {
+            '磁场速度场成像仪': '#3b82f6',
+            '多波段极紫外成像仪': '#10b981',
+            '全日面积分极紫外光谱仪': '#f59e0b',
+            '白光日冕仪': '#8b5cf6',
+            '日球成像仪': '#06b6d4',
+            'X射线成像望远镜': '#ef4444',
+            '太阳风离子质谱分析仪': '#ec4899',
+            '太阳风离子阻滞势分析仪': '#84cc16',
+            '磁强计': '#6366f1',
+            'PMU': '#f97316'
+        };
+
+        // 1月份任务（每个任务包含多个载荷单机的执行时间段）
+        const month1Tasks = [
+            { 
+                id: 'TASK-001', name: '太阳风观测', type: 'ground',
+                payloads: [
+                    { name: '磁场速度场成像仪', startDay: 1, endDay: 10 },
+                    { name: '多波段极紫外成像仪', startDay: 1, endDay: 10 },
+                    { name: '全日面积分极紫外光谱仪', startDay: 3, endDay: 8 }
+                ]
+            },
+            { 
+                id: 'TASK-002', name: '日冕物质抛射监测', type: 'orbit',
+                payloads: [
+                    { name: '磁场速度场成像仪', startDay: 5, endDay: 15 },
+                    { name: '多波段极紫外成像仪', startDay: 5, endDay: 15 },
+                    { name: '全日面积分极紫外光谱仪', startDay: 5, endDay: 15 },
+                    { name: '白光日冕仪', startDay: 5, endDay: 15 },
+                    { name: '日球成像仪', startDay: 5, endDay: 15 },
+                    { name: 'X射线成像望远镜', startDay: 5, endDay: 15 },
+                    { name: '太阳风离子质谱分析仪', startDay: 5, endDay: 15 },
+                    { name: '太阳风离子阻滞势分析仪', startDay: 5, endDay: 15 },
+                    { name: '磁强计', startDay: 5, endDay: 15 },
+                    { name: 'PMU', startDay: 5, endDay: 15 }
+                ]
+            },
+            { 
+                id: 'TASK-003', name: '太阳风离子分析', type: 'ground',
+                payloads: [
+                    { name: '太阳风离子质谱分析仪', startDay: 12, endDay: 22 },
+                    { name: '太阳风离子阻滞势分析仪', startDay: 12, endDay: 20 },
+                    { name: '磁强计', startDay: 15, endDay: 22 }
+                ]
+            },
+            { 
+                id: 'TASK-004', name: '极紫外光谱扫描', type: 'orbit',
+                payloads: [
+                    { name: '全日面积分极紫外光谱仪', startDay: 18, endDay: 31 },
+                    { name: '多波段极紫外成像仪', startDay: 20, endDay: 31 },
+                    { name: 'PMU', startDay: 18, endDay: 31 }
+                ]
+            }
+        ];
+
+        // 2月份任务
+        const month2Tasks = [
+            { 
+                id: 'TASK-004', name: '极紫外光谱扫描(续)', type: 'orbit',
+                payloads: [
+                    { name: '全日面积分极紫外光谱仪', startDay: 1, endDay: 5 },
+                    { name: '多波段极紫外成像仪', startDay: 1, endDay: 5 },
+                    { name: 'PMU', startDay: 1, endDay: 5 }
+                ]
+            },
+            { 
+                id: 'TASK-005', name: '多波段成像测试', type: 'ground',
+                payloads: [
+                    { name: '多波段极紫外成像仪', startDay: 3, endDay: 14 },
+                    { name: 'X射线成像望远镜', startDay: 5, endDay: 12 },
+                    { name: '白光日冕仪', startDay: 8, endDay: 14 }
+                ]
+            },
+            { 
+                id: 'TASK-006', name: '磁场强度监测', type: 'ground',
+                payloads: [
+                    { name: '磁场速度场成像仪', startDay: 10, endDay: 20 },
+                    { name: '磁强计', startDay: 10, endDay: 18 }
+                ]
+            },
+            { 
+                id: 'TASK-007', name: '太阳耀斑观测', type: 'orbit',
+                payloads: [
+                    { name: '磁场速度场成像仪', startDay: 15, endDay: 28 },
+                    { name: '多波段极紫外成像仪', startDay: 15, endDay: 28 },
+                    { name: '全日面积分极紫外光谱仪', startDay: 15, endDay: 28 },
+                    { name: '白光日冕仪', startDay: 15, endDay: 28 },
+                    { name: '日球成像仪', startDay: 15, endDay: 28 },
+                    { name: 'X射线成像望远镜', startDay: 15, endDay: 28 },
+                    { name: '太阳风离子质谱分析仪', startDay: 15, endDay: 28 },
+                    { name: '太阳风离子阻滞势分析仪', startDay: 15, endDay: 28 },
+                    { name: '磁强计', startDay: 15, endDay: 28 },
+                    { name: 'PMU', startDay: 15, endDay: 28 }
+                ]
+            },
+            { 
+                id: 'TASK-008', name: '日冕加热研究', type: 'ground',
+                payloads: [
+                    { name: '多波段极紫外成像仪', startDay: 22, endDay: 28 },
+                    { name: '全日面积分极紫外光谱仪', startDay: 22, endDay: 26 },
+                    { name: '日球成像仪', startDay: 24, endDay: 28 }
+                ]
+            }
+        ];
+
+        // 获取指定月份的任务数据（为每个载荷分配子行索引）
+        function getMonthTasks(month) {
+            const tasks = month === 1 ? month1Tasks : month2Tasks;
+            return tasks.map(task => ({
+                ...task,
+                payloads: task.payloads.map((p, idx) => ({
+                    ...p,
+                    subRowIndex: idx,
+                    totalSubRows: task.payloads.length
+                }))
+            }));
+        }
+
+// 月度数据
+        const monthData = {
+            categories: ['2024-03', '2024-04', '2024-05', '2024-06', '2024-07', '2024-08', '2024-09', '2024-10', '2024-11', '2024-12', '2025-01', '2025-02'],
+            taskCount: [12, 15, 18, 22, 25, 28, 24, 26, 30, 28, 22, 18],
+            instruments: {
+                'MFI': [8, 10, 12, 15, 18, 20, 17, 19, 22, 20, 16, 13],
+                'EUVI': [10, 12, 15, 18, 20, 22, 19, 21, 25, 23, 18, 15],
+                'SPEC': [8, 10, 12, 15, 18, 20, 17, 19, 22, 20, 16, 13],
+                'COR': [6, 8, 10, 12, 15, 17, 14, 16, 19, 17, 13, 11],
+                'HI': [7, 9, 11, 13, 16, 18, 15, 17, 20, 18, 14, 12],
+                'XRT': [10, 12, 15, 18, 20, 22, 19, 21, 25, 23, 18, 15],
+                'SMS': [8, 10, 12, 15, 18, 20, 17, 19, 22, 20, 16, 13],
+                'SAP': [6, 8, 10, 12, 15, 17, 14, 16, 19, 17, 13, 11],
+                'MAG': [8, 10, 12, 15, 18, 20, 17, 19, 22, 20, 16, 13]
+            }
+        };
+
+        // 年度数据
+        const yearData = {
+            categories: ['2021', '2022', '2023', '2024', '2025'],
+            taskCount: [85, 120, 156, 280, 48],
+            instruments: {
+                'MFI': [68, 95, 125, 220, 38],
+                'EUVI': [75, 105, 138, 245, 42],
+                'SPEC': [68, 95, 125, 220, 38],
+                'COR': [58, 82, 108, 185, 32],
+                'HI': [65, 90, 118, 205, 35],
+                'XRT': [75, 105, 138, 245, 42],
+                'SMS': [68, 95, 125, 220, 38],
+                'SAP': [58, 82, 108, 185, 32],
+                'MAG': [68, 95, 125, 220, 38]
+            }
+        };
+
+        const instrumentNames = {
+            'MFI': '磁场速度场成像仪',
+            'EUVI': '多波段极紫外成像仪',
+            'SPEC': '全日面极紫外光谱仪',
+            'COR': '白光日冕仪',
+            'HI': '日球成像仪',
+            'XRT': 'X射线成像望远镜',
+            'SMS': '太阳风离子质谱分析仪',
+            'SAP': '太阳风离子阻滞势分析仪',
+            'MAG': '磁强计'
+        };
+
+        // 第一个饼图：任务类型数量分布（带总数据量信息）
+        function initPieChart() {
+            const dom = document.getElementById('typePieChart');
+            if (!dom) return false;
+            if (pieChart) pieChart.dispose();
+
+            try {
+                pieChart = echarts.init(dom);
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: function (params) {
+                            return params.name + '<br/>' +
+                                '任务数量: ' + params.value + '个<br/>' +
+                                '占比: ' + params.percent + '%<br/>' +
+                                '<span style="color:#94a3b8">总数据量: ' + params.data.totalVolume + ' GB</span>';
+                        }
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        right: '2%',
+                        top: 'center',
+                        textStyle: { fontSize: 10, color: '#475569' }
+                    },
+                    series: [{
+                        name: '任务类型',
+                        type: 'pie',
+                        radius: ['30%', '55%'],
+                        center: ['35%', '50%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 6,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            position: 'outside',
+                            formatter: '{b}\n{c}个 ({d}%)',
+                            fontSize: 10,
+                            color: '#475569'
+                        },
+                        labelLine: {
+                            show: true,
+                            length: 8,
+                            length2: 6
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 12,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        data: pieData
+                    }],
+                    graphic: [
+                        {
+                            type: 'text',
+                            left: '28%',
+                            top: '85%',
+                            style: {
+                                text: '总数据: ' + groundVolume + ' GB',
+                                fontSize: 10,
+                                fill: '#3b82f6',
+                                fontWeight: 'bold'
+                            }
+                        },
+                        {
+                            type: 'text',
+                            left: '52%',
+                            top: '85%',
+                            style: {
+                                text: '总数据: ' + orbitVolume + ' GB',
+                                fontSize: 10,
+                                fill: '#ec4899',
+                                fontWeight: 'bold'
+                            }
+                        }
+                    ]
+                };
+                pieChart.setOption(option);
+                return true;
+            } catch (e) {
+                console.error('[Chart] Pie init error:', e);
+                return false;
+            }
+        }
+
+        // 第二个饼图：地面测试数据类型分布
+        function initGroundPieChart() {
+            const dom = document.getElementById('groundDataPieChart');
+            if (!dom) return false;
+            if (groundPieChart) groundPieChart.dispose();
+
+            try {
+                groundPieChart = echarts.init(dom);
+                const option = {
+                    title: {
+                        text: '地面测试',
+                        subtext: '总数据量: ' + groundVolume + ' GB',
+                        left: 'center',
+                        top: '5%',
+                        textStyle: { fontSize: 12, color: '#3b82f6', fontWeight: 'bold' },
+                        subtextStyle: { fontSize: 10, color: '#64748b' }
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {d}%'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        right: '2%',
+                        top: 'middle',
+                        textStyle: { fontSize: 9, color: '#475569' }
+                    },
+                    series: [{
+                        name: '数据类型',
+                        type: 'pie',
+                        radius: ['25%', '50%'],
+                        center: ['35%', '55%'],
+                        itemStyle: {
+                            borderRadius: 4,
+                            borderColor: '#fff',
+                            borderWidth: 1
+                        },
+                        label: {
+                            show: true,
+                            position: 'outside',
+                            formatter: '{d}%',
+                            fontSize: 9,
+                            color: '#475569'
+                        },
+                        labelLine: {
+                            show: true,
+                            length: 6,
+                            length2: 4
+                        },
+                        data: groundDataTypes
+                    }]
+                };
+                groundPieChart.setOption(option);
+                return true;
+            } catch (e) {
+                console.error('[Chart] Ground Pie init error:', e);
+                return false;
+            }
+        }
+
+        // 第三个饼图：在轨运行仿真数据类型分布
+        function initOrbitPieChart() {
+            const dom = document.getElementById('orbitDataPieChart');
+            if (!dom) return false;
+            if (orbitPieChart) orbitPieChart.dispose();
+
+            try {
+                orbitPieChart = echarts.init(dom);
+                const option = {
+                    title: {
+                        text: '在轨运行仿真',
+                        subtext: '总数据量: ' + orbitVolume + ' GB',
+                        left: 'center',
+                        top: '5%',
+                        textStyle: { fontSize: 12, color: '#ec4899', fontWeight: 'bold' },
+                        subtextStyle: { fontSize: 10, color: '#64748b' }
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {d}%'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        right: '2%',
+                        top: 'middle',
+                        textStyle: { fontSize: 9, color: '#475569' }
+                    },
+                    series: [{
+                        name: '数据类型',
+                        type: 'pie',
+                        radius: ['25%', '50%'],
+                        center: ['35%', '55%'],
+                        itemStyle: {
+                            borderRadius: 4,
+                            borderColor: '#fff',
+                            borderWidth: 1
+                        },
+                        label: {
+                            show: true,
+                            position: 'outside',
+                            formatter: '{d}%',
+                            fontSize: 9,
+                            color: '#475569'
+                        },
+                        labelLine: {
+                            show: true,
+                            length: 6,
+                            length2: 4
+                        },
+                        data: orbitDataTypes
+                    }]
+                };
+                orbitPieChart.setOption(option);
+                return true;
+            } catch (e) {
+                console.error('[Chart] Orbit Pie init error:', e);
+                return false;
+            }
+        }
+
+        // 12个柱子的柱状图
+        function initTaskDataBarChart() {
+            const dom = document.getElementById('taskDataBarChart');
+            if (!dom) return false;
+            if (taskDataBarChart) taskDataBarChart.dispose();
+
+            try {
+                taskDataBarChart = echarts.init(dom);
+                const categories = taskListData.map(t => t.name);
+                const dataValues = taskListData.map(t => t.volume);
+                const statusColors = {
+                    'completed': '#10b981',
+                    'running': '#3b82f6',
+                    'waiting': '#94a3b8'
+                };
+                const statusLabels = {
+                    'completed': '已完成',
+                    'running': '数据生成中',
+                    'waiting': '待运行'
+                };
+
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'shadow' },
+                        formatter: function (params) {
+                            const task = taskListData[params[0].dataIndex];
+                            let html = '<div style="font-weight:bold;margin-bottom:4px">' + task.name + '</div>';
+                            html += '<div>任务ID: ' + task.id + '</div>';
+                            html += '<div>任务类型: ' + task.typeName + '</div>';
+                            html += '<div>状态: ' + statusLabels[task.status] + '</div>';
+                            if (task.volume > 0) {
+                                html += '<div>数据量: ' + task.volume + ' GB</div>';
+                            } else {
+                                html += '<div style="color:#94a3b8">暂无数据</div>';
+                            }
+                            return html;
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '2%',
+                        bottom: '15%',
+                        top: '8%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: categories,
+                        axisLabel: {
+                            fontSize: 10,
+                            rotate: 45,
+                            color: '#64748b',
+                            interval: 0,
+                            formatter: function(value, index) {
+                                const timeLabels = [
+                                    '08:00-08:45',   // TASK-001 已完成
+                                    '09:30-当前',     // TASK-002 数据生成中
+                                    '',               // TASK-003 待运行
+                                    '09:45-10:30',    // TASK-004 已完成
+                                    '08:30-09:15',    // TASK-005 已完成
+                                    '11:00-11:45',    // TASK-006 已完成
+                                    '',               // TASK-007 待运行
+                                    '13:30-当前',     // TASK-008 数据生成中
+                                    '15:00-15:45',    // TASK-009 已完成
+                                    '',               // TASK-010 待运行
+                                    '17:00-17:45',    // TASK-011 已完成
+                                    '18:00-当前'      // TASK-012 数据生成中
+                                ];
+                                const timeStr = timeLabels[index] || '';
+                                if (timeStr) {
+                                    return value + '\n' + timeStr;
+                                }
+                                return value;
+                            }
+                        },
+                        axisTick: { show: false },
+                        axisLine: { lineStyle: { color: '#e2e8f0' } }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '数据量 (GB)',
+                        nameTextStyle: { fontSize: 11, color: '#64748b' },
+                        axisLabel: {
+                            fontSize: 10,
+                            color: '#64748b',
+                            formatter: '{value}'
+                        },
+                        splitLine: { lineStyle: { color: '#f1f5f9' } }
+                    },
+                    series: [{
+                        name: '数据量',
+                        type: 'bar',
+                        barWidth: '60%',
+                        data: taskListData.map((t, index) => ({
+                            value: t.volume === 0 ? 0.2 : t.volume,
+                            itemStyle: {
+                                color: statusColors[t.status],
+                                borderRadius: [3, 3, 0, 0],
+                                opacity: t.volume === 0 ? 0.4 : 1
+                            },
+                            label: {
+                                show: true,
+                                position: 'top',
+                                formatter: function (params) {
+                                    const task = taskListData[params.dataIndex];
+                                    if (task.volume === 0) return '待运行';
+                                    return task.volume;
+                                },
+                                fontSize: 9,
+                                color: function (params) {
+                                    const task = taskListData[params.dataIndex];
+                                    return task.volume === 0 ? '#94a3b8' : statusColors[task.status];
+                                }
+                            }
+                        }))
+                    }]
+                };
+
+                taskDataBarChart.setOption(option);
+
+                // 点击事件：高亮对应列表行
+                taskDataBarChart.on('click', function (params) {
+                    const taskId = taskListData[params.dataIndex].id;
+                    const rows = document.querySelectorAll('.task-row');
+                    rows.forEach(row => {
+                        if (row.getAttribute('data-task-id') === taskId) {
+                            row.style.backgroundColor = '#f0f9ff';
+                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => {
+                                row.style.backgroundColor = '';
+                            }, 2000);
+                        }
+                    });
+                });
+
+                return true;
+            } catch (e) {
+                console.error('[Chart] Task Data Bar init error:', e);
+                return false;
+            }
+        }
+
+        function generateInstrumentSeries(data, isStack) {
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899'];
+            return Object.keys(data.instruments).map((key, index) => ({
+                name: instrumentNames[key],
+                type: 'bar',
+                stack: isStack ? 'instruments' : null,
+                emphasis: { focus: 'series' },
+                data: data.instruments[key],
+                itemStyle: {
+                    color: colors[index % colors.length],
+                    borderRadius: isStack ? 0 : [4, 4, 0, 0]
+                },
+                barWidth: isStack ? '50%' : '8%',
+                yAxisIndex: 1
+            }));
+        }
+
+        function initBarChart() {
+            return initGanttChart(1);
+        }
+
+        function initGanttChart(month) {
+            const dom = document.getElementById('timeBarChart');
+            if (!dom) return false;
+            if (barChart) barChart.dispose();
+
+            try {
+                barChart = echarts.init(dom);
+                renderGanttChart(month);
+                return true;
+            } catch (e) {
+                console.error('[Chart] Gantt init error:', e);
+                return false;
+            }
+        }
+
+                function renderGanttChart(month) {
+            if (!barChart) return;
+
+            const tasks = getMonthTasks(month);
+            const maxDay = monthDays[month - 1];
+
+            // Y轴：测试任务（每个任务占一行，行高根据载荷数量动态调整）
+            const yData = tasks.map(t => t.id + '\n' + t.name);
+
+            // 为每个任务的每个载荷构建数据点
+            const data = [];
+            const FIXED_BAR_HEIGHT = 16; // 固定每个载荷单机条块高度为16px
+            const BAR_GAP = 2; // 条块间隙
+
+            tasks.forEach((task, taskIndex) => {
+                task.payloads.forEach((payload) => {
+                    data.push({
+                        name: task.name,
+                        value: [
+                            taskIndex,           // 任务索引（Y轴）
+                            payload.startDay,    // 开始日期
+                            payload.endDay,      // 结束日期
+                            payload.endDay - payload.startDay + 1,  // 时长
+                            payload.subRowIndex, // 子行索引
+                            payload.totalSubRows // 该任务的总子行数
+                        ],
+                        itemStyle: { 
+                            color: instrumentColors[payload.name] || '#94a3b8',
+                            borderRadius: 2
+                        },
+                        taskData: {
+                            taskId: task.id,
+                            taskName: task.name,
+                            type: task.type,
+                            instrument: payload.name,
+                            startDay: payload.startDay,
+                            endDay: payload.endDay,
+                            duration: payload.endDay - payload.startDay + 1
+                        }
+                    });
+                });
+            });
+
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#e2e8f0',
+                    borderWidth: 1,
+                    textStyle: { color: '#334155', fontSize: 12 },
+                    formatter: function(params) {
+                        const item = params.data.taskData;
+                        const typeLabel = item.type === 'ground' ? '地面测试' : '在轨运行仿真';
+                        const typeColor = item.type === 'ground' ? '#3b82f6' : '#ec4899';
+
+                        let html = '<div style="font-weight:bold;font-size:13px;margin-bottom:6px">' + item.taskId + ' ' + item.taskName + '</div>';
+                        html += '<div style="margin-bottom:4px"><span style="color:#64748b">任务类型：</span><span style="color:' + typeColor + ';font-weight:500">' + typeLabel + '</span></div>';
+                        html += '<div style="margin-bottom:4px"><span style="color:#64748b">载荷单机：</span><strong>' + item.instrument + '</strong></div>';
+                        html += '<div style="margin-bottom:4px"><span style="color:#64748b">占用时长：</span><strong>' + item.duration + '天</strong></div>';
+                        html += '<div style="margin-bottom:4px"><span style="color:#64748b">起止日期：</span>' + month + '月' + item.startDay + '日 - ' + month + '月' + item.endDay + '日</div>';
+                        return html;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '8%',
+                    top: '5%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    min: 1,
+                    max: maxDay,
+                    interval: 1,
+                    name: monthNames[month - 1] + ' 日期',
+                    nameLocation: 'middle',
+                    nameGap: 25,
+                    nameTextStyle: { fontSize: 12, color: '#64748b', fontWeight: 'bold' },
+                    axisLabel: { 
+                        fontSize: 10, 
+                        color: '#64748b',
+                        formatter: '{value}日'
+                    },
+                    splitLine: { 
+                        show: true,
+                        lineStyle: { color: '#f1f5f9', type: 'dashed' }
+                    },
+                    axisLine: { lineStyle: { color: '#e2e8f0' } }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: yData,
+                    axisLabel: { 
+                        fontSize: 11,
+                        color: '#475569',
+                        fontWeight: 500,
+                        formatter: function(value) {
+                            return value.replace('\n', ' | ');
+                        }
+                    },
+                    axisTick: { show: false },
+                    axisLine: { show: false },
+                    splitLine: { 
+                        show: true,
+                        lineStyle: { color: '#f1f5f9' }
+                    }
+                },
+                series: [{
+                    type: 'custom',
+                    renderItem: function(params, api) {
+                        var categoryIndex = api.value(0);
+                        var start = api.coord([api.value(1), categoryIndex]);
+                        var end = api.coord([api.value(2), categoryIndex]);
+                        var subRowIndex = api.value(4);
+                        var totalSubRows = api.value(5);
+
+                        // 固定每个载荷单机条块高度，任务整体高度随载荷数量变化
+                        var fixedBarHeight = FIXED_BAR_HEIGHT;
+                        var gap = BAR_GAP;
+                        var taskTotalHeight = fixedBarHeight * totalSubRows + gap * (totalSubRows - 1);
+
+                        // 计算垂直偏移（从任务行中心向上偏移）
+                        var rowCenterY = start[1];
+                        var startY = rowCenterY - taskTotalHeight / 2;
+                        var currentY = startY + subRowIndex * (fixedBarHeight + gap);
+
+                        var rectShape = echarts.graphic.clipRectByRect({
+                            x: start[0],
+                            y: currentY,
+                            width: end[0] - start[0],
+                            height: fixedBarHeight
+                        }, {
+                            x: params.coordSys.x,
+                            y: params.coordSys.y,
+                            width: params.coordSys.width,
+                            height: params.coordSys.height
+                        });
+
+                        return rectShape && {
+                            type: 'rect',
+                            shape: rectShape,
+                            style: api.style({
+                                fill: api.visual('color'),
+                                stroke: '#fff',
+                                lineWidth: 1,
+                                shadowBlur: 2,
+                                shadowColor: 'rgba(0,0,0,0.1)'
+                            })
+                        };
+                    },
+                    encode: {
+                        x: [1, 2],
+                        y: 0
+                    },
+                    data: data,
+                    label: {
+                        show: true,
+                        position: 'inside',
+                        formatter: function(params) {
+                            const item = params.data.taskData;
+                            var duration = params.data.value[3];
+                            if (duration <= 2) return '';
+                            var name = item.instrument;
+                            if (name.length > 6) {
+                                return name.substring(0, 6) + '...';
+                            }
+                            return name;
+                        },
+                        fontSize: 9,
+                        color: '#fff',
+                        fontWeight: 'bold'
+                    }
+                }]
+            };
+
+            barChart.setOption(option, true);
+        }function switchGanttMonth(month) {
+            if (month === 1 || month === 2) {
+                renderGanttChart(month);
+            } else {
+                // 3-12月显示空内容提示
+                if (barChart) {
+                    const emptyOption = {
+                        title: {
+                            text: month + '月 暂无测试任务数据',
+                            left: 'center',
+                            top: 'middle',
+                            textStyle: { fontSize: 14, color: '#94a3b8' }
+                        },
+                        xAxis: { show: false },
+                        yAxis: { show: false },
+                        series: []
+                    };
+                    barChart.setOption(emptyOption, true);
+                }
+            }
+        }
+
+        // 重试机制初始化
+        let resizeObserver = null;
+        function setupResizeObserver() {
+            const chartContainers = [
+                document.getElementById('typePieChart'),
+                document.getElementById('groundDataPieChart'),
+                document.getElementById('orbitDataPieChart'),
+                document.getElementById('timeBarChart'),
+                document.getElementById('taskDataBarChart')
+            ];
+
+            if (resizeObserver) {
+                resizeObserver.disconnect();
+            }
+
+            resizeObserver = new ResizeObserver(entries => {
+                entries.forEach(entry => {
+                    const dom = entry.target;
+                    const chartInstance = echarts.getInstanceByDom(dom);
+                    if (chartInstance) {
+                        chartInstance.resize();
+                    }
+                });
+            });
+
+            chartContainers.forEach(dom => {
+                if (dom) resizeObserver.observe(dom);
+            });
+        }
+
+        function initChartsWithRetry(attempt = 1) {
+            console.log('[Chart] Initialization attempt ' + attempt);
+            const pieSuccess = initPieChart();
+            const groundPieSuccess = initGroundPieChart();
+            const orbitPieSuccess = initOrbitPieChart();
+            const barSuccess = initBarChart();
+            const taskDataBarSuccess = initTaskDataBarChart();
+
+            const allSuccess = pieSuccess && groundPieSuccess && orbitPieSuccess && barSuccess && taskDataBarSuccess;
+
+            if (!allSuccess) {
+                if (attempt < 10) {
+                    setTimeout(() => initChartsWithRetry(attempt + 1), 200);
+                } else {
+                    console.error('[Chart] Max retry attempts reached');
+                }
+            } else {
+                console.log('[Chart] All charts initialized successfully');
+                setupResizeObserver();
+            }
+        }
+
+        // 窗口大小变化监听
+        window.addEventListener('resize', () => {
+            if (pieChart) pieChart.resize();
+            if (groundPieChart) groundPieChart.resize();
+            if (orbitPieChart) orbitPieChart.resize();
+            if (barChart) barChart.resize();
+            if (taskDataBarChart) taskDataBarChart.resize();
+        });
+
+        // 确保初始化
+        if (document.readyState === 'complete') {
+            setTimeout(initChartsWithRetry, 100);
+        } else {
+            window.addEventListener('load', () => setTimeout(initChartsWithRetry, 100));
+            document.addEventListener('DOMContentLoaded', () => setTimeout(initChartsWithRetry, 200));
+        }
+
+        
+    </script>
+
+    <!-- Other Scripts -->
+    <script>
+        function toggleSubmenu(element) {
+            element.classList.toggle('expanded');
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.getFullYear() + '-' +
+                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                String(now.getDate()).padStart(2, '0') + ' ' +
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0') + ':' +
+                String(now.getSeconds()).padStart(2, '0');
+            const el = document.getElementById('systemTime');
+            if (el) el.textContent = timeStr;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+
+    
+    <!-- Task Detail Modal -->
+    <div id="taskDetailModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-slate-800/60 backdrop-blur-sm" onclick="closeTaskDetailModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl pointer-events-auto flex flex-col" style="max-height: 90vh;">
+
+                <!-- Header -->
+                <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-sky-50 to-white shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-sky-500 rounded-lg flex items-center justify-center shadow-md shadow-sky-200">
+                            <i class="fa-solid fa-chart-pie text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800" id="detailModalTitle">任务数据统计</h3>
+                            <p class="text-xs text-slate-500" id="detailModalSubtitle">查看任务包含的数据统计信息</p>
+                        </div>
+                    </div>
+                    <button onclick="closeTaskDetailModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="p-6 overflow-y-auto">
+                    <!-- Task Info Banner -->
+                    <div class="bg-slate-50 rounded-lg p-3 mb-5 border border-slate-200 flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500">任务ID:</span>
+                            <span class="text-sm font-mono font-semibold text-sky-600" id="detailTaskId">--</span>
+                        </div>
+                        <div class="w-px h-4 bg-slate-300"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500">任务名称:</span>
+                            <span class="text-sm font-semibold text-slate-700" id="detailTaskName">--</span>
+                        </div>
+                        <div class="w-px h-4 bg-slate-300"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500">任务类型:</span>
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="detailTaskType">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Two Charts Row -->
+                    <div class="grid grid-cols-2 gap-5">
+                        <!-- Chart 1: Instrument Statistics -->
+                        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <i class="fa-solid fa-satellite text-sky-500"></i>
+                                    载荷单机数据统计
+                                </h4>
+                                <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded">按数据量</span>
+                            </div>
+                            <div id="detailInstrumentChart" style="width:100%;height:320px;min-height:320px;"></div>
+                            <div class="text-center text-xs text-slate-400 mt-2">展示各载荷单机产生的数据量分布</div>
+                        </div>
+
+                        <!-- Chart 2: Data Type Statistics -->
+                        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <i class="fa-solid fa-database text-emerald-500"></i>
+                                    数据种类统计
+                                </h4>
+                                <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded">按类型</span>
+                            </div>
+                            <div id="detailDataTypeChart" style="width:100%;height:320px;min-height:320px;"></div>
+                            <div class="text-center text-xs text-slate-400 mt-2">科学数据 / 遥测数据 / 工程参数 / 其他数据</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end shrink-0">
+                    <button onclick="closeTaskDetailModal()" class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg border border-slate-300 transition-colors">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal HTML and JS (保持原有模态框代码) -->
+    <div id="createTaskModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-slate-800/80" onclick="closeModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl pointer-events-auto flex flex-col" style="max-height: 90vh;">
+
+                <!-- Header -->
+                <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 bg-sky-500 rounded flex items-center justify-center">
+                            <i class="fa-solid fa-plus text-white text-sm"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-slate-800">新建测试任务</h3>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="p-5 overflow-y-auto">
+                    <form id="createTaskForm" class="space-y-4">
+
+                        <!-- 第1行：任务ID、创建时间 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">任务ID <span class="text-red-500">*</span></label>
+                                <input type="text" id="taskId" name="taskId" readonly
+                                    class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-md text-sm text-slate-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">创建时间</label>
+                                <input type="text" id="createTime" name="createTime" readonly
+                                    class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-md text-sm text-slate-600">
+                            </div>
+                        </div>
+
+                        <!-- 第2行：任务背景、任务内容 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">任务背景</label>
+                                <input type="text" id="taskBackground" name="taskBackground" placeholder="请输入任务背景" required
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">任务内容</label>
+                                <input type="text" id="taskContent" name="taskContent" placeholder="请输入任务内容" required
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                            </div>
+                        </div>
+
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">测试人员</label>
+                                <select id="testPersonnel" name="testPersonnel" required
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:border-sky-500">
+                                    <option value="">请选择</option>
+                                    <option value="zhang">张工程师</option>
+                                    <option value="li">李工程师</option>
+                                    <option value="wang">王工程师</option>
+                                    <option value="zhou">周工程师</option>
+                                    <option value="chen">陈工程师</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">预计时长</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="duration" name="duration" min="1" value="2"
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-sky-500">
+                                    <span class="text-sm text-slate-500 whitespace-nowrap">小时</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 任务类型和载荷配置 - 按照样例图片布局 -->
+                        <div class="border border-slate-200 rounded-lg p-4 bg-white">
+                            <h4 class="text-base font-semibold text-slate-800 mb-3">任务类型和载荷配置</h4>
+
+                            <!-- 任务类型选择 + 测试时间 -->
+                            <div class="flex items-center gap-4 mb-4 pb-3 border-b border-slate-100">
+                                <div class="flex items-center gap-2">
+                                    <label class="block text-sm font-medium text-slate-700">任务类型</label>
+                                    <select id="taskTypeSelect" name="taskType" onchange="handleTaskTypeChange(this.value)"
+                                        class="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:border-sky-500">
+                                        <option value="ground">地面测试</option>
+                                        <option value="orbit">在轨运行仿真</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center gap-2" id="testTimeWrapper">
+                                    <label class="block text-sm font-medium text-slate-700">测试时间</label>
+                                    <input type="datetime-local" id="testTime" name="testTime"
+                                        class="px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-sky-500">
+                                </div>
+                                <label class="flex items-center gap-1 cursor-pointer text-sm text-slate-600 hover:text-sky-600 ml-auto">
+                                    <input type="checkbox" id="selectAllPayloads" onchange="toggleSelectAllPayloads(this.checked)" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500">
+                                    <span>全选/重置</span>
+                                </label>
+                            </div>
+
+                            <!-- 统一的载荷单机列表 -->
+                            <div class="grid grid-cols-2 gap-x-6 gap-y-1">
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="MFI" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">磁场速度场成像仪</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="EUVI" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">多波段极紫外成像仪</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="SPEC" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">全日面积分极紫外光谱仪</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="COR" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">白光日冕仪</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="HI" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">日球成像仪</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="XRT" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">X射线成像望远镜</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="SMS" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">太阳风离子质谱分析仪</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="SAP" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">太阳风离子阻滞势分析仪</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                    <input type="checkbox" name="payloads" value="MAG" 
+                                        class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm text-slate-700">磁强计</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-sky-50 p-1 rounded bg-sky-50/50">
+                                    <input type="checkbox" name="payloads" value="PMU" 
+                                        class="w-4 h-4 rounded border-sky-300 text-sky-600 focus:ring-sky-500 payload-checkbox">
+                                    <span class="text-sm font-medium text-sky-700">PMU</span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3 shrink-0">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-md border border-slate-300 transition-colors">取消</button>
+                    <button type="button" onclick="submitTask()" class="px-5 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md shadow-sm flex items-center gap-2 transition-colors">
+                        <i class="fa-solid fa-check text-sm"></i>确认创建
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- Other Scripts -->
+    <script>
+        function toggleSubmenu(element) {
+            element.classList.toggle('expanded');
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.getFullYear() + '-' +
+                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                String(now.getDate()).padStart(2, '0') + ' ' +
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0') + ':' +
+                String(now.getSeconds()).padStart(2, '0');
+            const el = document.getElementById('systemTime');
+            if (el) el.textContent = timeStr;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Modal Functions
+        function openModal() {
+            const modal = document.getElementById('createTaskModal');
+            if (modal) {
+                const now = new Date();
+                const dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+                const randomNum = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
+                const taskId = 'TASK-' + dateStr + '-' + randomNum;
+
+                // 重置表单
+                document.getElementById('createTaskForm').reset();
+                document.getElementById('taskId').value = '#' + taskId;
+                document.getElementById('createTime').value = now.toLocaleString('zh-CN');
+
+                // 默认选中地面测试
+                document.getElementById('taskTypeSelect').value = 'ground';
+
+                // 清除全选复选框状态
+                document.getElementById('selectAllPayloads').checked = false;
+                // 初始化测试时间屏蔽状态（地面测试默认屏蔽）
+                handleTaskTypeChange('ground');
+
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('createTaskModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 全选/重置功能
+        function handleTaskTypeChange(value) {
+            const testTimeWrapper = document.getElementById('testTimeWrapper');
+            const testTimeInput = document.getElementById('testTime');
+            if (value === 'ground') {
+                testTimeWrapper.style.opacity = '0.5';
+                testTimeWrapper.style.pointerEvents = 'none';
+                testTimeInput.disabled = true;
+                testTimeInput.value = '';
+            } else {
+                testTimeWrapper.style.opacity = '1';
+                testTimeWrapper.style.pointerEvents = 'auto';
+                testTimeInput.disabled = false;
+            }
+        }
+
+        function toggleSelectAllPayloads(checked) {
+            const checkboxes = document.querySelectorAll('.payload-checkbox');
+            checkboxes.forEach(cb => cb.checked = checked);
+        }
+
+        // 监听单个复选框变化，更新全选状态
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('payload-checkbox')) {
+                const allChecked = document.querySelectorAll('.payload-checkbox:checked').length === document.querySelectorAll('.payload-checkbox').length;
+                document.getElementById('selectAllPayloads').checked = allChecked;
+            }
+        });
+
+        function submitTask() {
+            const background = document.getElementById('taskBackground').value.trim();
+            const content = document.getElementById('taskContent').value.trim();
+            const testTime = document.getElementById('testTime').value;
+            const personnel = document.getElementById('testPersonnel').value;
+            const taskType = document.getElementById('taskTypeSelect').value;
+
+            // 获取选中的载荷
+            let selectedPayloads = document.querySelectorAll('.payload-checkbox:checked');
+            let hasPMU = false;
+
+            selectedPayloads.forEach(cb => {
+                if (cb.value === 'PMU') hasPMU = true;
+            });
+
+            if (selectedPayloads.length === 0) {
+                alert('请至少选择一个载荷单机');
+                return;
+            }
+
+            if (taskType === 'orbit' && !hasPMU) {
+                alert('在轨运行仿真任务必须选择PMU电源管理单元');
+                return;
+            }
+
+            const payloadCount = selectedPayloads.length - (hasPMU ? 1 : 0);
+            alert('任务创建成功！任务类型：' + (taskType === 'ground' ? '地面测试' : '在轨运行仿真') + '，已选择 ' + payloadCount + ' 个载荷单机' + (hasPMU ? ' + PMU' : ''));
+            closeModal();
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('createTaskModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            }
+        });
+    
+        window.switchGanttMonth = switchGanttMonth;
+    
+        // ========== Task Detail Modal Functions ==========
+        let detailInstrumentChart = null;
+        let detailDataTypeChart = null;
+
+        function openTaskDetailModal(taskId, taskName, taskType) {
+            const modal = document.getElementById('taskDetailModal');
+            if (!modal) return;
+
+            // 更新弹窗标题和信息
+            document.getElementById('detailModalTitle').textContent = taskName + ' - 数据统计';
+            document.getElementById('detailTaskId').textContent = '#' + taskId;
+            document.getElementById('detailTaskName').textContent = taskName;
+
+            const typeEl = document.getElementById('detailTaskType');
+            if (taskType === 'ground') {
+                typeEl.textContent = '地面测试';
+                typeEl.className = 'text-xs px-2 py-0.5 rounded-full font-medium type-badge-ground';
+            } else {
+                typeEl.textContent = '在轨运行仿真';
+                typeEl.className = 'text-xs px-2 py-0.5 rounded-full font-medium type-badge-orbit';
+            }
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // 延迟初始化图表，确保DOM已渲染
+            setTimeout(() => {
+                initDetailCharts(taskId, taskType);
+            }, 150);
+        }
+
+        function closeTaskDetailModal() {
+            const modal = document.getElementById('taskDetailModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+            // 销毁图表实例
+            if (detailInstrumentChart) {
+                detailInstrumentChart.dispose();
+                detailInstrumentChart = null;
+            }
+            if (detailDataTypeChart) {
+                detailDataTypeChart.dispose();
+                detailDataTypeChart = null;
+            }
+        }
+
+                function initDetailCharts(taskId, taskType) {
+            const instrumentDom = document.getElementById('detailInstrumentChart');
+            const dataTypeDom = document.getElementById('detailDataTypeChart');
+            if (!instrumentDom || !dataTypeDom) return;
+
+            // 模拟数据 - 根据任务ID生成不同的数据
+            const seed = taskId.split('-')[1];
+            const baseVolume = taskType === 'ground' ? 2.5 : 3.0;
+
+            // 载荷单机数据（9个载荷）
+            const instruments = [
+                { name: '磁场速度场成像仪', key: 'MFI' },
+                { name: '多波段极紫外成像仪', key: 'EUVI' },
+                { name: '全日面积分极紫外光谱仪', key: 'SPEC' },
+                { name: '白光日冕仪', key: 'COR' },
+                { name: '日球成像仪', key: 'HI' },
+                { name: 'X射线成像望远镜', key: 'XRT' },
+                { name: '太阳风离子质谱分析仪', key: 'SMS' },
+                { name: '太阳风离子阻滞势分析仪', key: 'SAP' },
+                { name: '磁强计', key: 'MAG' }
+            ];
+
+            const instrumentColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#ec4899', '#84cc16', '#6366f1'];
+
+            // 生成载荷单机数据（每个载荷有不同的数据量）
+            const instrumentData = instruments.map((inst, idx) => {
+                const volume = parseFloat((baseVolume * (0.5 + Math.random() * 1.0)).toFixed(2));
+                return {
+                    name: inst.name,
+                    value: volume,
+                    itemStyle: { color: instrumentColors[idx] }
+                };
+            }).sort((a, b) => b.value - a.value);
+
+            // 计算总数据量
+            const totalVolume = instrumentData.reduce((sum, d) => sum + d.value, 0).toFixed(2);
+
+            // 数据种类数据（根据总数据量分配）
+            const dataTypeColors = ['#10b981', '#06b6d4', '#f59e0b', '#94a3b8'];
+            const sciVolume = parseFloat((totalVolume * 0.45).toFixed(2));
+            const teleVolume = parseFloat((totalVolume * 0.30).toFixed(2));
+            const engVolume = parseFloat((totalVolume * 0.18).toFixed(2));
+            const otherVolume = parseFloat((totalVolume * 0.07).toFixed(2));
+
+            const dataTypeData = [
+                { value: sciVolume, name: '科学数据', itemStyle: { color: dataTypeColors[0] } },
+                { value: teleVolume, name: '遥测数据', itemStyle: { color: dataTypeColors[1] } },
+                { value: engVolume, name: '工程参数', itemStyle: { color: dataTypeColors[2] } },
+                { value: otherVolume, name: '其他数据', itemStyle: { color: dataTypeColors[3] } }
+            ];
+
+            // 初始化载荷单机柱状图
+            if (detailInstrumentChart) detailInstrumentChart.dispose();
+            detailInstrumentChart = echarts.init(instrumentDom);
+
+            const instrumentOption = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    formatter: function(params) {
+                        const p = params[0];
+                        const percent = ((p.value / totalVolume) * 100).toFixed(1);
+                        return p.name + '<br/>数据量: <strong>' + p.value + ' GB</strong><br/>占比: <strong>' + percent + '%</strong>';
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    top: '12%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: instrumentData.map(d => d.name),
+                    axisLabel: {
+                        fontSize: 10,
+                        rotate: 30,
+                        color: '#64748b',
+                        interval: 0
+                    },
+                    axisTick: { show: false },
+                    axisLine: { lineStyle: { color: '#e2e8f0' } }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '数据量 (GB)',
+                    nameTextStyle: { fontSize: 11, color: '#64748b' },
+                    axisLabel: { fontSize: 10, color: '#64748b' },
+                    splitLine: { lineStyle: { color: '#f1f5f9' } }
+                },
+                series: [{
+                    type: 'bar',
+                    barWidth: '55%',
+                    data: instrumentData,
+                    itemStyle: {
+                        borderRadius: [4, 4, 0, 0]
+                    },
+                    label: {
+                        show: true,
+                        position: 'top',
+                        formatter: function(params) {
+                            const percent = ((params.value / totalVolume) * 100).toFixed(1);
+                            return params.value + ' GB\n(' + percent + '%)';
+                        },
+                        fontSize: 9,
+                        color: '#475569',
+                        lineHeight: 14
+                    }
+                }]
+            };
+            detailInstrumentChart.setOption(instrumentOption);
+
+            // 初始化数据种类饼图
+            if (detailDataTypeChart) detailDataTypeChart.dispose();
+            detailDataTypeChart = echarts.init(dataTypeDom);
+
+            const dataTypeOption = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        return params.name + '<br/>数据量: <strong>' + params.value + ' GB</strong><br/>占比: <strong>' + params.percent + '%</strong>';
+                    }
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: '5%',
+                    top: 'center',
+                    textStyle: { fontSize: 11, color: '#475569' }
+                },
+                series: [{
+                    name: '数据种类',
+                    type: 'pie',
+                    radius: ['35%', '60%'],
+                    center: ['40%', '50%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 6,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    },
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: function(params) {
+                            return params.name + '\n' + params.value + ' GB\n(' + params.percent + '%)';
+                        },
+                        fontSize: 11,
+                        color: '#475569',
+                        lineHeight: 16
+                    },
+                    labelLine: {
+                        show: true,
+                        length: 10,
+                        length2: 8
+                    },
+                    emphasis: {
+                        label: { show: true, fontSize: 12, fontWeight: 'bold' }
+                    },
+                    data: dataTypeData
+                }]
+            };
+            detailDataTypeChart.setOption(dataTypeOption);
+        }// 弹窗窗口大小变化监听
+        window.addEventListener('resize', () => {
+            if (detailInstrumentChart) detailInstrumentChart.resize();
+            if (detailDataTypeChart) detailDataTypeChart.resize();
+        });
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('taskDetailModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeTaskDetailModal();
+                }
+            }
+        });
+
+</script>

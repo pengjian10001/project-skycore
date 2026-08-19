@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真数据管理系统 | 中国科学院国家空间科学中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f1f5f9;
+            color: #334155;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item.active {
+            background-color: #f0f9ff;
+            color: #0ea5e9;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-item.sub-item {
+            padding-left: 2.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .nav-item.sub-item.active {
+            background-color: #f0f9ff;
+            color: #0284c7;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-group .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .nav-group.expanded .submenu {
+            max-height: 200px;
+        }
+
+        .nav-group.expanded .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .status-dot {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .legend-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        .task-row {
+            transition: all 0.15s ease;
+        }
+
+        .task-row:hover {
+            background-color: #f8fafc;
+        }
+
+        .compact-table th,
+        .compact-table td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .progress-bar-bg {
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+            height: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+        }
+
+        .badge-pulse {
+            animation: pulse-badge 2s infinite;
+        }
+
+        @keyframes pulse-badge {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.85;
+            }
+        }
+
+        .chart-container {
+            height: 220px;
+        }
+
+        /* 单选按钮样式 */
+        .radio-label {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        input[type="radio"]:checked+span,
+        .radio-active {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        .task-list-container {
+            max-height: 210px;
+            overflow-y: auto;
+        }
+
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .type-badge-ground {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .type-badge-orbit {
+            background-color: #fce7f3;
+            color: #be185d;
+        }
+
+        .status-waiting {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-running {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-parsing {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .status-processing {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-transmitting {
+            background-color: #ddd6fe;
+            color: #5b21b6;
+        }
+
+        /* 二级按钮激活样式 */
+        .instr-btn.active,
+        .task-btn.active {
+            background-color: #0ea5e9 !important;
+            color: white !important;
+            border-color: #0ea5e9 !important;
+            box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3);
+        }
+
+        .instr-btn,
+        .task-btn {
+            transition: all 0.2s ease;
+        }
+
+        .instr-btn:hover,
+        .task-btn:hover {
+            background-color: #f0f9ff;
+            border-color: #bae6fd;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm shrink-0">
+        <div class="h-14 flex items-center px-4 border-b border-slate-100">
+            <div class="w-7 h-7 bg-sky-600 rounded-md flex items-center justify-center mr-2 shadow-md shadow-sky-200">
+                <i class="fa-solid fa-satellite text-white text-xs"></i>
+            </div>
+            <div class="flex-1">
+                <h1 class="font-bold text-slate-800 text-xs tracking-tight">仿真数据管理</h1>
+                <p class="text-[9px] text-slate-400 uppercase tracking-wider">NSSC, CAS</p>
+            </div>
+            <!-- 主题切换按钮 - 上下垂直排列，放在标题后面 -->
+            <div class="flex flex-col gap-1">
+                <label class="inline-flex items-center cursor-pointer group">
+                    <input type="radio" name="theme" value="light" class="peer sr-only" checked
+                        onchange="switchTheme('light')">
+                    <a href="./首页-浅色版.html">
+                        <span
+                            class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-500 hover:bg-slate-50 transition-all">
+                            <i class="fa-regular fa-sun text-[9px]"></i>
+                            浅色
+                        </span>
+                    </a>
+                </label>
+                <label class="inline-flex items-center cursor-pointer group">
+                    <input type="radio" name="theme" value="dark" class="peer sr-only" onchange="switchTheme('dark')">
+                    <a href="./深色/首页_深色版.html">
+                        <span
+                            class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500 hover:bg-slate-50 transition-all">
+                            <i class="fa-solid fa-moon text-[9px]"></i>
+                            深色
+                        </span>
+                    </a>
+                </label>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 text-sm">
+            <a href="./首页-浅色版.html"
+                class="nav-item active flex items-center px-4 py-2.5 font-medium transition-colors hover:bg-slate-50">
+                <i class="fa-solid fa-chart-line w-5 text-xs"></i>
+                <span class="text-xs">数据实时监控</span>
+            </a>
+
+            <div class="nav-group expanded">
+                <div class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600 cursor-pointer"
+                    onclick="toggleSubmenu(this.parentElement)">
+                    <i class="fa-solid fa-database w-5 text-xs"></i>
+                    <span class="flex-1 text-xs">任务数据管理</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"></i>
+                </div>
+                <div class="submenu bg-slate-50/50">
+                    <a href="./浅色/1-2.1.任务管理.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        任务管理
+                    </a>
+                    <a href="./浅色/1-2.2.数据统计.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据统计
+                    </a>
+                    <a href="./浅色/1-2.3 数据查询.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据查询
+                    </a>
+                    <a href="./浅色/1-2.4.本地存储.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        本地存储
+                    </a>
+                </div>
+            </div>
+
+            <a href="./浅色/1-3.日志查询.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-file-code w-5 text-xs"></i>
+                <span class="text-xs">日志查询</span>
+            </a>
+
+            <a href="./浅色/1-4.系统管理.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-gear w-5 text-xs"></i>
+                <span class="text-xs">系统管理</span>
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+                <img src="https://ui-avatars.com/api/?name=Operator&background=e0f2fe&color=0ea5e9&size=32"
+                    class="w-7 h-7 rounded-full border border-slate-200">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-slate-900 truncate">测试操作员</p>
+                    <p class="text-[10px] text-slate-500 truncate">在线</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50/50 overflow-hidden">
+
+        <!-- Top Header -->
+        <header
+            class="bg-white border-b border-slate-200 h-12 flex items-center justify-between px-4 shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-slate-800 mr-2">数据实时监控中心</h2>
+                <div class="flex items-center gap-1.5">
+                    <span
+                        class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-100 flex items-center gap-1 badge-pulse">
+                        <span class="w-1 h-1 rounded-full bg-green-500 status-dot"></span>
+                        仿真平台运行中
+                    </span>
+                    <span
+                        class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1 badge-pulse">
+                        <span class="w-1 h-1 rounded-full bg-blue-500 status-dot"
+                            style="box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); animation: pulse-blue 2s infinite;"></span>
+                        载荷单机仿真运行中
+                    </span>
+                    <span
+                        class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1 badge-pulse">
+                        <span class="w-1 h-1 rounded-full bg-indigo-500 status-dot"
+                            style="box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); animation: pulse-indigo 2s infinite;"></span>
+                        数据入库运行中
+                    </span>
+                </div>
+            </div>
+            <style>
+                @keyframes pulse-blue {
+                    0% {
+                        transform: scale(0.95);
+                        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+                    }
+
+                    70% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+                    }
+
+                    100% {
+                        transform: scale(0.95);
+                        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+                    }
+                }
+
+                @keyframes pulse-indigo {
+                    0% {
+                        transform: scale(0.95);
+                        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+                    }
+
+                    70% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);
+                    }
+
+                    100% {
+                        transform: scale(0.95);
+                        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+                    }
+                }
+            </style>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                    <div class="text-right">
+                        <div class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">系统时间</div>
+                        <div class="text-[10px] font-mono text-sky-600 font-semibold" id="systemTime">2024-01-15
+                            10:42:05</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-3">
+
+            <!-- PART 1: 7 Statistics Cards -->
+            <div class="grid grid-cols-8 gap-3">
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-clipboard-list text-4xl text-sky-600"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">今日测试任务</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">12 <span
+                            class="text-[10px] font-normal text-slate-400">个</span></div>
+                    <div class="flex items-center text-[10px] text-slate-600">
+                        <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 mr-1">地面8</span>
+                        <span class="px-1.5 py-0.5 rounded bg-pink-50 text-pink-600">在轨4</span>
+                    </div>
+                </div>
+
+                <!-- 新增：今日载荷单机 -->
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white border-l-3 border-l-indigo-400">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-microchip text-4xl text-indigo-600"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">今日载荷单机</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">156 <span
+                            class="text-[10px] font-normal text-slate-400">次</span></div>
+                    <div class="flex items-center text-[10px] text-indigo-600 font-medium">
+                        <i class="fa-solid fa-arrow-trend-up mr-1 text-[8px]"></i> 高频使用
+                    </div>
+                </div>
+
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-satellite-dish text-4xl text-sky-600"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">今日接收指令</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">1,284 <span
+                            class="text-[10px] font-normal text-slate-400">条</span></div>
+                    <div class="flex items-center text-[10px] text-green-600 font-medium">
+                        <i class="fa-solid fa-arrow-trend-up mr-1 text-[8px]"></i> 12% 较上时段
+                    </div>
+                </div>
+
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white border-l-3 border-l-emerald-400">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-check-circle text-4xl text-emerald-600"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">今日处理完成指令</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">1,156 <span
+                            class="text-[10px] font-normal text-slate-400">条</span></div>
+                    <div class="flex items-center text-[10px] text-emerald-600 font-medium">
+                        <i class="fa-solid fa-check-double mr-1 text-[8px]"></i> 完成率 90.0%
+                    </div>
+                </div>
+
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-database text-4xl text-indigo-600"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">今日入库数据量</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">48.2 <span
+                            class="text-[10px] font-normal text-slate-400">GB</span></div>
+                    <div class="w-full bg-slate-100 rounded-full h-1 mt-1">
+                        <div class="bg-indigo-500 h-1 rounded-full" style="width: 70%"></div>
+                    </div>
+                </div>
+
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-triangle-exclamation text-4xl text-amber-500"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">异常/告警</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">3 <span
+                            class="text-[10px] font-normal text-slate-400">条</span></div>
+                    <div class="flex items-center text-[10px] text-amber-600 font-medium">
+                        <i class="fa-solid fa-circle-exclamation mr-1 text-[8px]"></i> 需人工确认
+                    </div>
+                </div>
+
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-server text-4xl text-emerald-600"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">本地存储空间使用率</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">92%</div>
+                    <div class="flex items-center text-[10px] text-emerald-600 font-medium">
+                        <i class="fa-solid fa-check mr-1 text-[8px]"></i> 状态良好
+                    </div>
+                </div>
+                <div
+                    class="stat-card glass-panel rounded-lg p-3 relative overflow-hidden group hover:shadow-md transition-all bg-white">
+                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i class="fa-solid fa-memory text-4xl text-amber-600"></i>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-0.5">PMU存储空间使用率</div>
+                    <div class="text-lg font-bold text-slate-800 mb-0.5">85%</div>
+                    <div class="flex items-center text-[10px] text-amber-600 font-medium">
+                        <i class="fa-solid fa-check mr-1 text-[8px]"></i> PMU状态正常
+                    </div>
+                </div>
+            </div>
+
+            <!-- PART 2: Entity List with Tabs -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
+                <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="text-xs font-bold text-slate-800">实时监控列表</h3>
+                    <div class="flex items-center gap-6">
+                        <!-- 单选按钮组 - 靠右放置 -->
+                        <div class="flex items-center gap-3">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="entityType" value="task" class="peer sr-only" checked
+                                    onchange="switchEntityTab('task', this)">
+                                <span
+                                    class="px-3 py-1.5 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 hover:bg-slate-50 transition-all flex items-center gap-1.5">
+                                    <span
+                                        class="w-3 h-3 rounded-full border-2 border-current flex items-center justify-center"><span
+                                            class="w-1.5 h-1.5 rounded-full bg-current peer-checked:block hidden"></span></span>
+                                    测试任务
+                                </span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="entityType" value="payload" class="peer sr-only"
+                                    onchange="switchEntityTab('payload', this)">
+                                <span
+                                    class="px-3 py-1.5 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 hover:bg-slate-50 transition-all flex items-center gap-1.5">
+                                    <span
+                                        class="w-3 h-3 rounded-full border-2 border-current flex items-center justify-center"></span>
+                                    载荷单机
+                                </span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="entityType" value="command" class="peer sr-only"
+                                    onchange="switchEntityTab('command', this)">
+                                <span
+                                    class="px-3 py-1.5 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 hover:bg-slate-50 transition-all flex items-center gap-1.5">
+                                    <span
+                                        class="w-3 h-3 rounded-full border-2 border-current flex items-center justify-center"></span>
+                                    任务指令
+                                </span>
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <i
+                                class="fa-solid fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                            <input type="text" placeholder="搜索ID或名称..."
+                                class="pl-6 pr-2 py-1 text-[11px] border border-slate-200 rounded focus:outline-none focus:border-sky-500 w-40">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task List View -->
+                <div id="taskView" class="task-list-container">
+                    <table class="w-full text-left border-collapse compact-table">
+                        <thead class="sticky top-0 bg-slate-50 z-10">
+                            <tr class="border-b border-slate-200 text-[10px] uppercase text-slate-500 font-semibold">
+                                <th class="whitespace-nowrap">任务ID</th>
+                                <th class="whitespace-nowrap">任务背景</th>
+                                <th class="whitespace-nowrap">任务内容</th>
+                                <th class="whitespace-nowrap">任务类型</th>
+                                <th class="whitespace-nowrap">载荷单机</th>
+                                <th class="whitespace-nowrap">测试时间</th>
+                                <th class="whitespace-nowrap">测试人员</th>
+                                <th class="whitespace-nowrap">当前状态</th>
+                                <th class="whitespace-nowrap">处理进度</th>
+                                <th class="whitespace-nowrap text-right">数据量</th>
+                                <th class="whitespace-nowrap text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700"> <!-- 待运行 - 排在最前面 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-003</td>
+                                <td class="whitespace-nowrap text-[11px]">太阳风离子分析</td>
+                                <td class="whitespace-nowrap text-[11px]">离子质谱扫描</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-1.5 py-0.5 rounded font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="MFI...、EUVI...、SPEC...、COR...、HI...、XRT...、SMS...、SAP...、MAG...、PMU">
+                                    MFI...、EUVI...、SPEC...、COR...、HI...、XRT...、SMS...、SAP...、MAG...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 10:00</td>
+                                <td class="whitespace-nowrap text-[11px]">王工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待运行
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-slate-300" style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">0%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-006</td>
+                                <td class="whitespace-nowrap text-[11px]">X射线暴监测</td>
+                                <td class="whitespace-nowrap text-[11px]">能谱分析测试</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-1.5 py-0.5 rounded font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate" title="XRT...、PMU">
+                                    XRT...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 11:30</td>
+                                <td class="whitespace-nowrap text-[11px]">赵工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待运行
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-slate-300" style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">0%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-008</td>
+                                <td class="whitespace-nowrap text-[11px]">磁场矢量测量</td>
+                                <td class="whitespace-nowrap text-[11px]">全日面磁图扫描</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-1.5 py-0.5 rounded font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="MFI...、MAG...、PMU">MFI...、MAG...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 14:00</td>
+                                <td class="whitespace-nowrap text-[11px]">孙工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待运行
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-slate-300" style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">0%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-009</td>
+                                <td class="whitespace-nowrap text-[11px]">日冕物质抛射跟踪</td>
+                                <td class="whitespace-nowrap text-[11px]">多角度成像</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-1.5 py-0.5 rounded font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="COR...、HI...、PMU">COR...、HI...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 15:30</td>
+                                <td class="whitespace-nowrap text-[11px]">钱工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待运行
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-slate-300" style="width: 0%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">0%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 处理中 - 排在中间 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-002</td>
+                                <td class="whitespace-nowrap text-[11px]">日冕物质抛射</td>
+                                <td class="whitespace-nowrap text-[11px]">白光日冕成像</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-1.5 py-0.5 rounded font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="COR...、HI...、PMU">COR...、HI...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 09:30</td>
+                                <td class="whitespace-nowrap text-[11px]">李工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-running">
+                                        <span class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></span>数据生成中
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-blue-500" style="width: 65%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">65%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">1.8 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-004</td>
+                                <td class="whitespace-nowrap text-[11px]">极紫外光谱分析</td>
+                                <td class="whitespace-nowrap text-[11px]">谱线扫描观测</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-1.5 py-0.5 rounded font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="SPEC...、EUVI...、PMU">SPEC...、EUVI...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 09:45</td>
+                                <td class="whitespace-nowrap text-[11px]">周工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-transmitting">
+                                        <span class="w-1 h-1 rounded-full bg-purple-500 animate-pulse"></span>数据回传中
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-purple-500" style="width: 45%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">45%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">1.2 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-007</td>
+                                <td class="whitespace-nowrap text-[11px]">太阳风离子采集</td>
+                                <td class="whitespace-nowrap text-[11px]">离子成分分析</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-1.5 py-0.5 rounded font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="SMS...、SAP...、PMU">SMS...、SAP...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 10:15</td>
+                                <td class="whitespace-nowrap text-[11px]">吴工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-processing">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>处理中
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-amber-500" style="width: 30%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">30%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">0.8 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-010</td>
+                                <td class="whitespace-nowrap text-[11px]">X射线成像</td>
+                                <td class="whitespace-nowrap text-[11px]">高分辨率成像</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-1.5 py-0.5 rounded font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate" title="XRT...、PMU">
+                                    XRT...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 16:00</td>
+                                <td class="whitespace-nowrap text-[11px]">郑工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-parsing">
+                                        <span class="w-1 h-1 rounded-full bg-indigo-500 animate-pulse"></span>数据解析中
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-indigo-500" style="width: 55%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">55%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">1.5 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 已完成 - 排在最后 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-001</td>
+                                <td class="whitespace-nowrap text-[11px]">太阳风观测</td>
+                                <td class="whitespace-nowrap text-[11px]">全日面磁场扫描</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-1.5 py-0.5 rounded font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="MFI...、EUVI...、SPEC...、COR...、HI...、XRT...、SMS...、SAP...、MAG...、PMU">
+                                    MFI...、EUVI...、SPEC...、COR...、HI...、XRT...、SMS...、SAP...、MAG...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 08:00</td>
+                                <td class="whitespace-nowrap text-[11px]">张工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">2.4 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">
+                                            <i class="fa-solid fa-download"></i> 下载
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-005</td>
+                                <td class="whitespace-nowrap text-[11px]">多波段成像测试</td>
+                                <td class="whitespace-nowrap text-[11px]">极紫外成像序列</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-1.5 py-0.5 rounded font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="EUVI...、SPEC...、PMU">EUVI...、SPEC...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 08:30</td>
+                                <td class="whitespace-nowrap text-[11px]">陈工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">3.1 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">
+                                            <i class="fa-solid fa-download"></i> 下载
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-011</td>
+                                <td class="whitespace-nowrap text-[11px]">磁场扰动监测</td>
+                                <td class="whitespace-nowrap text-[11px]">矢量磁场测量</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-orbit text-[10px] px-1.5 py-0.5 rounded font-medium">在轨运行仿真</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="MAG...、MFI...、PMU">MAG...、MFI...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 07:30</td>
+                                <td class="whitespace-nowrap text-[11px]">刘工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">1.9 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">
+                                            <i class="fa-solid fa-download"></i> 下载
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#TASK-20240115-012</td>
+                                <td class="whitespace-nowrap text-[11px]">太阳风速度测量</td>
+                                <td class="whitespace-nowrap text-[11px]">质子速度分析</td>
+                                <td class="whitespace-nowrap"><span
+                                        class="type-badge-ground text-[10px] px-1.5 py-0.5 rounded font-medium">地面测试</span>
+                                </td>
+                                <td class="whitespace-nowrap text-[10px] max-w-[120px] truncate"
+                                    title="SAP...、SMS...、PMU">SAP...、SMS...、PMU</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">2024-01-15 06:45</td>
+                                <td class="whitespace-nowrap text-[11px]">黄工程师</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="w-24">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 progress-bar-bg">
+                                            <div class="progress-bar-fill bg-emerald-500" style="width: 100%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-500 w-6">100%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right font-medium text-slate-800 whitespace-nowrap text-[11px]">2.2 GB
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">
+                                            <i class="fa-solid fa-eye"></i> 详情
+                                        </button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">
+                                            <i class="fa-solid fa-download"></i> 下载
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Payload List View (Hidden by default) -->
+                <div id="payloadView" class="task-list-container hidden">
+                    <table class="w-full text-left border-collapse compact-table">
+                        <thead class="sticky top-0 bg-slate-50 z-10">
+                            <tr class="border-b border-slate-200 text-[10px] uppercase text-slate-500 font-semibold">
+                                <th class="whitespace-nowrap">载荷ID</th>
+                                <th class="whitespace-nowrap">所属测试任务</th>
+                                <th class="whitespace-nowrap">载荷单机名称</th>
+                                <th class="whitespace-nowrap">指令数量</th>
+                                <th class="whitespace-nowrap">当前状态</th>
+                                <th class="whitespace-nowrap">开始时间</th>
+                                <th class="whitespace-nowrap">结束时间</th>
+                                <th class="whitespace-nowrap text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700"> <!-- 待运行 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-005-HI</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-008</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">日球成像仪</td>
+                                <td class="whitespace-nowrap text-[11px]">0条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待运行
+                                    </span>
+                                </td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-009-XRT</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-009</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">X射线成像望远镜</td>
+                                <td class="whitespace-nowrap text-[11px]">0条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待运行
+                                    </span>
+                                </td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- 处理中 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-002-EUVI</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-002</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">多波段极紫外成像仪</td>
+                                <td class="whitespace-nowrap text-[11px]">8条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-running">
+                                        <span class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></span>数据生成中
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">09:30:05</td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-003-PMU</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-002</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">PMU管理单元</td>
+                                <td class="whitespace-nowrap text-[11px]">6条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-running">
+                                        <span class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></span>数据生成中
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">09:30:10</td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-010-SPEC</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-004</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">全日面极紫外光谱仪</td>
+                                <td class="whitespace-nowrap text-[11px]">5条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-transmitting">
+                                        <span class="w-1 h-1 rounded-full bg-purple-500 animate-pulse"></span>数据回传中
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">09:45:20</td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-011-COR</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-007</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">白光日冕仪</td>
+                                <td class="whitespace-nowrap text-[11px]">4条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-processing">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>处理中
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:15:30</td>
+                                <td class="text-slate-400 whitespace-nowrap text-[11px]">--</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- 已完成 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-001-MFI</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-001</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">磁场速度场成像仪</td>
+                                <td class="whitespace-nowrap text-[11px]">12条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">08:00:15</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">08:45:30</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-004-EUVI2</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-005</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">极紫外成像仪-02</td>
+                                <td class="whitespace-nowrap text-[11px]">10条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">08:30:10</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">09:15:45</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-006-MAG</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-011</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">磁强计</td>
+                                <td class="whitespace-nowrap text-[11px]">15条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">07:30:05</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">08:10:20</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-007-SMS</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-012</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">太阳风离子质谱分析仪</td>
+                                <td class="whitespace-nowrap text-[11px]">9条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">06:45:12</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">07:30:18</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-008-SAP</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-012</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">太阳风离子阻滞势分析仪</td>
+                                <td class="whitespace-nowrap text-[11px]">7条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">06:45:15</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">07:25:40</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#PL-012-PMU2</td>
+                                <td class="whitespace-nowrap text-[11px]">#TASK-20240115-001</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">PMU管理单元-02</td>
+                                <td class="whitespace-nowrap text-[11px]">11条</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">08:00:20</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">08:40:10</td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Command List View (Hidden by default) -->
+                <div id="commandView" class="task-list-container hidden">
+                    <table class="w-full text-left border-collapse compact-table">
+                        <thead class="sticky top-0 bg-slate-50 z-10">
+                            <tr class="border-b border-slate-200 text-[10px] uppercase text-slate-500 font-semibold">
+                                <th class="whitespace-nowrap">指令ID</th>
+                                <th class="whitespace-nowrap">指令名称</th>
+                                <th class="whitespace-nowrap">所属载荷单机</th>
+                                <th class="whitespace-nowrap">所属任务</th>
+                                <th class="whitespace-nowrap">接收时间</th>
+                                <th class="whitespace-nowrap">当前状态</th>
+                                <th class="whitespace-nowrap text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700"> <!-- 待处理 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7826</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">曝光时间设置</td>
+                                <td class="whitespace-nowrap text-[11px]">日球成像仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-008</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:42:25</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待处理
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7827</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">能谱范围配置</td>
+                                <td class="whitespace-nowrap text-[11px]">X射线成像望远镜</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-009</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:42:28</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-waiting">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>待处理
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- 处理中 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7825</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">电压调节设置</td>
+                                <td class="whitespace-nowrap text-[11px]">PMU管理单元</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-002</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:42:18</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-processing">
+                                        <span class="w-1 h-1 rounded-full bg-amber-500"></span>处理中
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7824</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">波段选择</td>
+                                <td class="whitespace-nowrap text-[11px]">多波段极紫外成像仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-002</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:42:12</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-transmitting">
+                                        <span class="w-1 h-1 rounded-full bg-purple-500 animate-pulse"></span>数据回传中
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7828</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">扫描模式切换</td>
+                                <td class="whitespace-nowrap text-[11px]">全日面极紫外光谱仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-004</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:42:20</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-parsing">
+                                        <span class="w-1 h-1 rounded-full bg-indigo-500 animate-pulse"></span>数据解析中
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7829</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">温度控制设置</td>
+                                <td class="whitespace-nowrap text-[11px]">白光日冕仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-007</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:42:22</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-running">
+                                        <span class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></span>执行中
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- 已完成 -->
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7823</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">观测模式切换</td>
+                                <td class="whitespace-nowrap text-[11px]">磁场速度场成像仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-001</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:42:05</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7820</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">成像参数配置</td>
+                                <td class="whitespace-nowrap text-[11px]">多波段极紫外成像仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-005</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:41:55</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7818</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">磁场校准</td>
+                                <td class="whitespace-nowrap text-[11px]">磁强计</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-011</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:41:45</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7815</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">离子采集启动</td>
+                                <td class="whitespace-nowrap text-[11px]">太阳风离子质谱分析仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-012</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:41:30</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7812</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">电源分配设置</td>
+                                <td class="whitespace-nowrap text-[11px]">PMU管理单元-02</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-001</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:41:15</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="task-row">
+                                <td class="font-mono text-slate-500 whitespace-nowrap">#CMD-7808</td>
+                                <td class="whitespace-nowrap font-medium text-slate-800">数据采集启动</td>
+                                <td class="whitespace-nowrap text-[11px]">太阳风离子阻滞势分析仪</td>
+                                <td class="whitespace-nowrap text-[10px]">#TASK-012</td>
+                                <td class="text-slate-500 whitespace-nowrap text-[11px]">10:40:50</td>
+                                <td class="whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium status-completed">
+                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>已完成
+                                    </span>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-sky-50 text-sky-600 rounded hover:bg-sky-100 transition-colors">详情</button>
+                                        <button
+                                            class="px-2 py-1 text-[10px] bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors">下载</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PART 3: Data Flow Visualization -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white">
+                <div class="px-3 py-2 border-b border-slate-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-bold text-slate-800">下行数据流实时监控</h3>
+                        <div class="flex items-center gap-6">
+                            <!-- 单选按钮组 - 靠右放置 -->
+                            <div class="flex items-center gap-3">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="dimension" value="payload" class="peer sr-only" checked
+                                        onchange="switchDimension('payload', this)">
+                                    <span
+                                        class="px-3 py-1.5 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 hover:bg-slate-50 transition-all flex items-center gap-1.5">
+                                        <span
+                                            class="w-3 h-3 rounded-full border-2 border-current flex items-center justify-center"></span>
+                                        载荷单机
+                                    </span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="dimension" value="task" class="peer sr-only"
+                                        onchange="switchDimension('task', this)">
+                                    <span
+                                        class="px-3 py-1.5 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-600 peer-checked:bg-sky-500 peer-checked:text-white peer-checked:border-sky-500 hover:bg-slate-50 transition-all flex items-center gap-1.5">
+                                        <span
+                                            class="w-3 h-3 rounded-full border-2 border-current flex items-center justify-center"></span>
+                                        测试任务
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payload Dimension Controls -->
+                    <div id="payloadControls" class="grid grid-cols-10 gap-1">
+                        <button
+                            class="instr-btn active rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 0)">
+                            磁场速度场<br>成像仪
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 1)">
+                            多波段极紫外<br>成像仪
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 2)">
+                            全日面极紫外<br>光谱仪
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 3)">
+                            白光<br>日冕仪
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 4)">
+                            日球<br>成像仪
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 5)">
+                            X射线成像<br>望远镜
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 6)">
+                            太阳风离子<br>质谱分析仪
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 7)">
+                            太阳风离子<br>阻滞势分析仪
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px]"
+                            onclick="toggleInstrument(this, 8)">
+                            磁强计
+                        </button>
+                        <button
+                            class="instr-btn rounded border border-slate-200 bg-slate-100 text-slate-800 font-bold text-center leading-tight py-1 text-[10px]"
+                            onclick="selectAllInstruments(this)">
+                            全选/重置
+                        </button>
+                    </div>
+
+                    <!-- Task Dimension Controls (Hidden by default) -->
+                    <div id="taskControls" class="grid grid-cols-6 gap-1 hidden">
+                        <button
+                            class="task-btn active rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px] px-2"
+                            onclick="toggleTask(this, 0)">
+                            TASK-001<br>太阳风观测
+                        </button>
+                        <button
+                            class="task-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px] px-2"
+                            onclick="toggleTask(this, 1)">
+                            TASK-002<br>日冕物质抛射
+                        </button>
+                        <button
+                            class="task-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px] px-2"
+                            onclick="toggleTask(this, 2)">
+                            TASK-003<br>离子分析测试
+                        </button>
+                        <button
+                            class="task-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px] px-2"
+                            onclick="toggleTask(this, 3)">
+                            TASK-004<br>磁场扫描测试
+                        </button>
+                        <button
+                            class="task-btn rounded border border-slate-200 bg-white text-slate-600 font-medium text-center leading-tight py-1 text-[10px] px-2"
+                            onclick="toggleTask(this, 4)">
+                            TASK-005<br>X射线监测
+                        </button>
+                        <button
+                            class="task-btn rounded border border-slate-200 bg-slate-100 text-slate-800 font-bold text-center leading-tight py-1 text-[10px]"
+                            onclick="selectAllTasks(this)">
+                            全选/重置
+                        </button>
+                    </div>
+                </div>
+                <div class="p-2 chart-container">
+                    <div id="mainChart" class="w-full h-full"></div>
+                </div>
+            </div>
+
+            <!-- PART 4 & 5: Bottom Section -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Data Storage Status -->
+                <div class="glass-panel rounded-lg p-3 border border-slate-200 shadow-sm bg-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-[11px] font-bold text-slate-800 uppercase tracking-wide">数据入库状态更新</h3>
+                        <span class="text-[10px] text-green-600 font-medium flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 status-dot"></span> 实时同步中
+                        </span>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-flask"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] font-medium text-slate-700">科学数据入库</div>
+                                    <div class="text-[9px] text-slate-400">入库起始时间：10:42:10 &nbsp;&nbsp;最近更新时间：10:42:15</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[11px] font-bold text-slate-800">1,024 MB</div>
+                                <div class="text-[9px] text-green-600">成功</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-tower-broadcast"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] font-medium text-slate-700">遥测数据入库</div>
+                                    <div class="text-[9px] text-slate-400">入库起始时间：10:42:08 &nbsp;&nbsp;最近更新时间：10:42:14</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[11px] font-bold text-slate-800">256 MB</div>
+                                <div class="text-[9px] text-green-600">成功</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-6 h-6 rounded bg-orange-100 text-orange-600 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-gears"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] font-medium text-slate-700">工程参数入库</div>
+                                    <div class="text-[9px] text-slate-400">入库起始时间：10:42:12 &nbsp;&nbsp;最近更新时间：10:42:16</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[11px] font-bold text-slate-800">48 MB</div>
+                                <div class="text-[9px] text-amber-600">处理中</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Logs -->
+                <div class="glass-panel rounded-lg p-3 border border-slate-200 shadow-sm bg-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-[11px] font-bold text-slate-800 uppercase tracking-wide">系统日志监测</h3>
+                        <div class="flex gap-1">
+                            <span class="text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">Info</span>
+                            <span class="text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">Warn</span>
+                            <span class="text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">Error</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900 rounded p-2 font-mono text-[10px] text-slate-300 h-[140px] overflow-y-auto shadow-inner"
+                        id="logContainer">
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:01]</span> <span
+                                class="text-slate-500">INFO</span> 系统初始化完成，仿真平台连接建立</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:02]</span> <span
+                                class="text-slate-500">INFO</span> TCP模块连接建立成功 192.168.1.105:8080</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:05]</span> <span
+                                class="text-blue-400">DATA</span> 接收到任务指令: CMD-7823 (磁场速度场成像仪)</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:06]</span> <span
+                                class="text-purple-400">DB</span> 指令入库成功,ID: CMD-7823</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:07]</span> <span
+                                class="text-blue-400">DATA</span> 指令转发至载荷单机: 磁场速度场成像仪</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:12]</span> <span
+                                class="text-yellow-400">WARN</span> 数据存储模块检测到延迟 > 50ms</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:15]</span> <span
+                                class="text-blue-400">DATA</span> 磁场速度场成像仪数据生成完成，大小: 256MB</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:16]</span> <span
+                                class="text-purple-400">DB</span> 科学数据入库成功，类型: 磁场成像数据</div>
+                        <div class="mb-0.5"><span class="text-green-400">[10:42:18]</span> <span
+                                class="text-blue-400">DATA</span> PMU管理单元数据回传中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="text-center text-[10px] text-slate-400 pb-1">
+                &copy; 2024 中国科学院国家空间科学中心 | 仿真数据管理系统 | NSSC, CAS
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        // --- Submenu Toggle Logic ---
+        function toggleSubmenu(element) {
+            element.classList.toggle('expanded');
+        }
+
+        // --- Entity Tab Switching ---
+        function switchEntityTab(type, radio) {
+            // 更新视图
+            document.getElementById('taskView').classList.add('hidden');
+            document.getElementById('payloadView').classList.add('hidden');
+            document.getElementById('commandView').classList.add('hidden');
+
+            if (type === 'task') {
+                document.getElementById('taskView').classList.remove('hidden');
+            } else if (type === 'payload') {
+                document.getElementById('payloadView').classList.remove('hidden');
+            } else if (type === 'command') {
+                document.getElementById('commandView').classList.remove('hidden');
+            }
+        }
+
+        // --- Dimension Tab Switching ---
+        function switchDimension(type, radio) {
+            // Update controls
+            if (type === 'payload') {
+                document.getElementById('payloadControls').classList.remove('hidden');
+                document.getElementById('taskControls').classList.add('hidden');
+                // Reset to instrument data
+                activeItems = new Set([0]);
+                // 重置按钮样式
+                document.querySelectorAll('.instr-btn').forEach((btn, idx) => {
+                    if (idx === 0 || idx === 9) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+                document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+                updateChart();
+            } else {
+                document.getElementById('payloadControls').classList.add('hidden');
+                document.getElementById('taskControls').classList.remove('hidden');
+                // Reset to task data
+                activeTasks = new Set([0]);
+                // 重置按钮样式
+                document.querySelectorAll('.task-btn').forEach((btn, idx) => {
+                    if (idx === 0 || idx === 5) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+                document.querySelectorAll('.instr-btn').forEach(btn => btn.classList.remove('active'));
+                updateTaskChart();
+            }
+        }
+
+        // --- Chart Logic for Payload Dimension ---
+        const instruments = [
+            '磁场速度场成像仪', '多波段极紫外成像仪', '全日面极紫外光谱仪',
+            '白光日冕仪', '日球成像仪', 'X射线成像望远镜',
+            '太阳风离子质谱分析仪', '太阳风离子阻滞势分析仪', '磁强计'
+        ];
+
+        let activeItems = new Set([0]);
+
+        const chartDom = document.getElementById('mainChart');
+        const myChart = echarts.init(chartDom);
+
+        let categories = (function () {
+            let now = new Date();
+            let res = [];
+            let len = 30;
+            while (len--) {
+                res.unshift(now.toLocaleTimeString().replace(/^\D*/, ''));
+                now = new Date(now - 2000);
+            }
+            return res;
+        })();
+
+        let dataStore = [];
+        for (let i = 0; i < 9; i++) {
+            dataStore.push([
+                Array(30).fill(0).map(() => Math.random() * 40 + 10),
+                Array(30).fill(0).map(() => Math.random() * 20 + 5),
+                Array(30).fill(0).map(() => Math.random() * 10 + 2)
+            ]);
+        }
+
+        // Task data store
+        let taskDataStore = [];
+        for (let i = 0; i < 5; i++) {
+            taskDataStore.push([
+                Array(30).fill(0).map(() => Math.random() * 100 + 50),
+                Array(30).fill(0).map(() => Math.random() * 50 + 20),
+                Array(30).fill(0).map(() => Math.random() * 30 + 10)
+            ]);
+        }
+        let activeTasks = new Set([0]);
+
+        function getAggregatedData() {
+            let agg = [Array(30).fill(0), Array(30).fill(0), Array(30).fill(0)];
+            activeItems.forEach(idx => {
+                for (let t = 0; t < 30; t++) {
+                    agg[0][t] += dataStore[idx][0][t];
+                    agg[1][t] += dataStore[idx][1][t];
+                    agg[2][t] += dataStore[idx][2][t];
+                }
+            });
+            let totalLine = Array(30).fill(0);
+            for (let t = 0; t < 30; t++) {
+                totalLine[t] = agg[0][t] + agg[1][t] + agg[2][t];
+            }
+            return { types: agg, total: totalLine };
+        }
+
+        function getTaskAggregatedData() {
+            let agg = [Array(30).fill(0), Array(30).fill(0), Array(30).fill(0)];
+            activeTasks.forEach(idx => {
+                for (let t = 0; t < 30; t++) {
+                    agg[0][t] += taskDataStore[idx][0][t];
+                    agg[1][t] += taskDataStore[idx][1][t];
+                    agg[2][t] += taskDataStore[idx][2][t];
+                }
+            });
+            let totalLine = Array(30).fill(0);
+            for (let t = 0; t < 30; t++) {
+                totalLine[t] = agg[0][t] + agg[1][t] + agg[2][t];
+            }
+            return { types: agg, total: totalLine };
+        }
+
+        function getOption() {
+            const data = getAggregatedData();
+
+            return {
+                tooltip: { trigger: 'axis', textStyle: { fontSize: 11 } },
+                // 移除 legend，不显示图例
+                grid: { left: '2%', right: '3%', bottom: '5%', top: '10%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: categories,
+                    axisLine: { lineStyle: { color: '#cbd5e1' } },
+                    axisLabel: { color: '#64748b', fontSize: 9 },
+                    axisTick: { show: false }
+                },
+                yAxis: {
+                    type: 'value',
+                    splitLine: { lineStyle: { color: '#f1f5f9' } },
+                    axisLabel: { color: '#64748b', fontSize: 9 }
+                },
+                series: [
+                    {
+                        name: '科学数据', type: 'line', smooth: true, symbol: 'none',
+                        data: data.types[0], lineStyle: { width: 2, color: '#3b82f6' }
+                    },
+                    {
+                        name: '遥测数据', type: 'line', smooth: true, symbol: 'none',
+                        data: data.types[1], lineStyle: { width: 2, color: '#10b981' }
+                    },
+                    {
+                        name: '工程参数', type: 'line', smooth: true, symbol: 'none',
+                        data: data.types[2], lineStyle: { width: 2, color: '#f97316' }
+                    },
+                    {
+                        name: '汇总', type: 'line', smooth: true, symbol: 'none',
+                        lineStyle: { width: 2, color: '#8b5cf6', type: 'dashed' },
+                        data: data.total
+                    }
+                ]
+            };
+        }
+
+        function getTaskOption() {
+            const data = getTaskAggregatedData();
+
+            return {
+                tooltip: { trigger: 'axis', textStyle: { fontSize: 11 } },
+                // 移除 legend，不显示图例
+                grid: { left: '2%', right: '3%', bottom: '5%', top: '10%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: categories,
+                    axisLine: { lineStyle: { color: '#cbd5e1' } },
+                    axisLabel: { color: '#64748b', fontSize: 9 },
+                    axisTick: { show: false }
+                },
+                yAxis: {
+                    type: 'value',
+                    splitLine: { lineStyle: { color: '#f1f5f9' } },
+                    axisLabel: { color: '#64748b', fontSize: 9 }
+                },
+                series: [
+                    {
+                        name: '科学数据', type: 'line', smooth: true, symbol: 'none',
+                        data: data.types[0], lineStyle: { width: 2, color: '#3b82f6' }
+                    },
+                    {
+                        name: '遥测数据', type: 'line', smooth: true, symbol: 'none',
+                        data: data.types[1], lineStyle: { width: 2, color: '#10b981' }
+                    },
+                    {
+                        name: '工程参数', type: 'line', smooth: true, symbol: 'none',
+                        data: data.types[2], lineStyle: { width: 2, color: '#f97316' }
+                    },
+                    {
+                        name: '汇总', type: 'line', smooth: true, symbol: 'none',
+                        lineStyle: { width: 2, color: '#8b5cf6', type: 'dashed' },
+                        data: data.total
+                    }
+                ]
+            };
+        }
+
+        myChart.setOption(getOption());
+
+        function toggleInstrument(btn, index) {
+            // 跳过"全选/重置"按钮（最后一个）
+            if (index === 9) return;
+
+            if (activeItems.has(index)) {
+                if (activeItems.size > 1) {
+                    activeItems.delete(index);
+                    btn.classList.remove('active');
+                }
+            } else {
+                activeItems.add(index);
+                btn.classList.add('active');
+            }
+            updateChart();
+        }
+
+        function selectAllInstruments(btn) {
+            const allBtns = document.querySelectorAll('#payloadControls .instr-btn:not(:last-child)');
+            if (activeItems.size === 9) {
+                activeItems.clear();
+                activeItems.add(0);
+                allBtns.forEach((b, i) => {
+                    if (i === 0) b.classList.add('active');
+                    else b.classList.remove('active');
+                });
+            } else {
+                activeItems.clear();
+                allBtns.forEach((b, i) => {
+                    activeItems.add(i);
+                    b.classList.add('active');
+                });
+            }
+            updateChart();
+        }
+
+        function toggleTask(btn, index) {
+            // 跳过"全选/重置"按钮（最后一个）
+            if (index === 5) return;
+
+            if (activeTasks.has(index)) {
+                if (activeTasks.size > 1) {
+                    activeTasks.delete(index);
+                    btn.classList.remove('active');
+                }
+            } else {
+                activeTasks.add(index);
+                btn.classList.add('active');
+            }
+            updateTaskChart();
+        }
+
+        function selectAllTasks(btn) {
+            const allBtns = document.querySelectorAll('#taskControls .task-btn:not(:last-child)');
+            if (activeTasks.size === 5) {
+                activeTasks.clear();
+                activeTasks.add(0);
+                allBtns.forEach((b, i) => {
+                    if (i === 0) b.classList.add('active');
+                    else b.classList.remove('active');
+                });
+            } else {
+                activeTasks.clear();
+                allBtns.forEach((b, i) => {
+                    activeTasks.add(i);
+                    b.classList.add('active');
+                });
+            }
+            updateTaskChart();
+        }
+
+        function updateChart() {
+            myChart.setOption(getOption(), true);
+        }
+
+        function updateTaskChart() {
+            myChart.setOption(getTaskOption(), true);
+        }
+
+        setInterval(function () {
+            let now = new Date();
+            categories.shift();
+            categories.push(now.toLocaleTimeString().replace(/^\D*/, ''));
+
+            // Update instrument data
+            for (let i = 0; i < 9; i++) {
+                dataStore[i][0].shift(); dataStore[i][0].push(Math.random() * 40 + 10);
+                dataStore[i][1].shift(); dataStore[i][1].push(Math.random() * 20 + 5);
+                dataStore[i][2].shift(); dataStore[i][2].push(Math.random() * 10 + 2);
+            }
+
+            // Update task data
+            for (let i = 0; i < 5; i++) {
+                taskDataStore[i][0].shift(); taskDataStore[i][0].push(Math.random() * 100 + 50);
+                taskDataStore[i][1].shift(); taskDataStore[i][1].push(Math.random() * 50 + 20);
+                taskDataStore[i][2].shift(); taskDataStore[i][2].push(Math.random() * 30 + 10);
+            }
+
+            // Update system time
+            document.getElementById('systemTime').textContent = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            }).replace(/\//g, '-');
+
+            // Determine which view is active and update accordingly
+            if (!document.getElementById('payloadControls').classList.contains('hidden')) {
+                myChart.setOption({
+                    xAxis: { data: categories },
+                    series: getOption().series
+                });
+            } else {
+                myChart.setOption({
+                    xAxis: { data: categories },
+                    series: getTaskOption().series
+                });
+            }
+        }, 2000);
+
+        window.addEventListener('resize', () => myChart.resize());
+
+        // 主题切换功能
+        function switchTheme(theme) {
+            if (theme === 'dark') {
+                // 跳转到深色版本页面
+                const currentPage = window.location.pathname.split('/').pop();
+                const darkPage = currentPage.replace('_light.html', '.html').replace('-浅色.html', '.html');
+                window.location.href = darkPage;
+            }
+            // 如果已经是浅色，保持在当前页面
+        }
+
+    </script>
+</body>
+
+</html>

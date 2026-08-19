@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地存储 | 仿真数据管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f1f5f9;
+            color: #334155;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item.active {
+            background-color: #f0f9ff;
+            color: #0ea5e9;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-item.sub-item {
+            padding-left: 2.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .nav-item.sub-item.active {
+            background-color: #f0f9ff;
+            color: #0284c7;
+            border-right: 3px solid #0ea5e9;
+        }
+
+        .nav-group .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .nav-group.expanded .submenu {
+            max-height: 200px;
+        }
+
+        .nav-group.expanded .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .status-dot {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .badge-pulse {
+            animation: pulse-badge 2s infinite;
+        }
+
+        @keyframes pulse-badge {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.85;
+            }
+        }
+
+        .chart-container {
+            height: 200px;
+        }
+
+        .alert-item {
+            transition: all 0.2s ease;
+        }
+
+        .alert-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-btn {
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background-color: #0ea5e9;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm shrink-0">
+        <div class="h-14 flex items-center px-4 border-b border-slate-100">
+            <div class="w-7 h-7 bg-sky-600 rounded-md flex items-center justify-center mr-2 shadow-md shadow-sky-200">
+                <i class="fa-solid fa-satellite text-white text-xs"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-slate-800 text-xs tracking-tight">仿真数据管理</h1>
+                <p class="text-[9px] text-slate-400 uppercase tracking-wider">NSSC, CAS</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 text-sm">
+            <a href="./../首页-浅色版.html"
+                class="nav-item active flex items-center px-4 py-2.5 font-medium transition-colors hover:bg-slate-50">
+                <i class="fa-solid fa-chart-line w-5 text-xs"></i>
+                <span class="text-xs">数据实时监控</span>
+            </a>
+
+            <div class="nav-group expanded">
+                <div class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600 cursor-pointer"
+                    onclick="toggleSubmenu(this.parentElement)">
+                    <i class="fa-solid fa-database w-5 text-xs"></i>
+                    <span class="flex-1 text-xs">任务数据管理</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"></i>
+                </div>
+                <div class="submenu bg-slate-50/50">
+                    <a href="./1-2.1.任务管理.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        任务管理
+                    </a>
+                    <a href="./1-2.2.数据统计.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据统计
+                    </a>
+                    <a href="./1-2.3 数据查询.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        数据查询
+                    </a>
+                    <a href="./1-2.4.本地存储.html"
+                        class="nav-item sub-item flex items-center py-2 px-4 transition-colors hover:bg-slate-50 hover:text-sky-600">
+                        本地存储
+                    </a>
+                </div>
+            </div>
+
+            <a href="./1-3.日志查询.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-file-code w-5 text-xs"></i>
+                <span class="text-xs">日志查询</span>
+            </a>
+
+            <a href="./1-4.系统管理.html"
+                class="nav-item flex items-center px-4 py-2.5 text-slate-600 font-medium transition-colors hover:bg-slate-50 hover:text-sky-600">
+                <i class="fa-solid fa-gear w-5 text-xs"></i>
+                <span class="text-xs">系统管理</span>
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+                <img src="https://ui-avatars.com/api/?name=Admin&background=e0f2fe&color=0ea5e9&size=32"
+                    class="w-7 h-7 rounded-full border border-slate-200">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-slate-900 truncate">系统管理员</p>
+                    <p class="text-[10px] text-slate-500 truncate">在线</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50/50 overflow-hidden">
+
+        <!-- Top Header -->
+        <header
+            class="bg-white border-b border-slate-200 h-12 flex items-center justify-between px-4 shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-slate-800 mr-2">本地存储</h2>
+                <span
+                    class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-100 flex items-center gap-1 badge-pulse">
+                    <span class="w-1 h-1 rounded-full bg-green-500 status-dot"></span>
+                    存储系统运行正常
+                </span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                    <i class="fa-solid fa-clock text-slate-400 text-xs"></i>
+                    <span class="text-[10px] text-slate-600" id="currentTime">2025-03-17 14:32:18</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
+            <!-- PART 1: 存储资源概览饼图（含剩余空间） -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-sky-500 text-xs"></i>
+                        <h3 class="text-xs font-bold text-slate-800">存储资源分布概览</h3>
+                        <span class="text-[10px] text-slate-500">总容量 20 TB</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-[10px]">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full"
+                                style="background-color: #ef4444;"></span>科学数据</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full"
+                                style="background-color: #06b6d4;"></span>遥测数据</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full"
+                                style="background-color: #10b981;"></span>工程参数</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full"
+                                style="background-color: #94a3b8;"></span>剩余空间</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <!-- 饼图容器 -->
+                    <div id="storagePieChart" class="w-[320px] h-[280px] shrink-0"></div>
+                    <!-- 详细信息卡片 -->
+                    <div class="flex-1 grid grid-cols-2 gap-3">
+                        <div class="bg-red-50 rounded-lg p-3 border border-red-100">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fa-solid fa-flask text-red-500 text-xs"></i>
+                                <span class="text-[11px] text-slate-600">科学数据</span>
+                            </div>
+                            <div class="text-lg font-bold text-slate-800">8.2 <span
+                                    class="text-xs font-normal text-slate-500">TB</span></div>
+                            <div class="text-[10px] text-red-600">41.0%</div>
+                        </div>
+                        <div class="bg-cyan-50 rounded-lg p-3 border border-cyan-100">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fa-solid fa-tower-broadcast text-cyan-500 text-xs"></i>
+                                <span class="text-[11px] text-slate-600">遥测数据</span>
+                            </div>
+                            <div class="text-lg font-bold text-slate-800">4.6 <span
+                                    class="text-xs font-normal text-slate-500">TB</span></div>
+                            <div class="text-[10px] text-cyan-600">23.0%</div>
+                        </div>
+                        <div class="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fa-solid fa-gears text-emerald-500 text-xs"></i>
+                                <span class="text-[11px] text-slate-600">工程参数</span>
+                            </div>
+                            <div class="text-lg font-bold text-slate-800">3.0 <span
+                                    class="text-xs font-normal text-slate-500">TB</span></div>
+                            <div class="text-[10px] text-emerald-600">15.0%</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fa-solid fa-hard-drive text-slate-500 text-xs"></i>
+                                <span class="text-[11px] text-slate-600">剩余空间</span>
+                            </div>
+                            <div class="text-lg font-bold text-slate-800">4.2 <span
+                                    class="text-xs font-normal text-slate-500">TB</span></div>
+                            <div class="text-[10px] text-slate-500">21.0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PART 2: 统计图表区域 -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- 当前存储趋势 -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white">
+                    <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-sky-500 text-xs"></i>
+                            <h3 class="text-xs font-bold text-slate-800">当前存储趋势（近7天）</h3>
+                        </div>
+                        <div class="flex items-center gap-1 text-[10px]">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>科学
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>遥测
+                            <span class="w-2 h-2 rounded-full bg-orange-500"></span>工程
+                            <span class="w-2 h-2 rounded-full bg-purple-500"></span>总计
+                        </div>
+                    </div>
+                    <div class="p-2 chart-container">
+                        <div id="currentTrendChart" class="w-full h-full"></div>
+                    </div>
+                </div>
+
+                <!-- 历史月度统计 -->
+                <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white">
+                    <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-indigo-500 text-xs"></i>
+                            <h3 class="text-xs font-bold text-slate-800">历史月度统计</h3>
+                        </div>
+                        <div class="flex gap-1">
+                            <button class="tab-btn active px-2 py-0.5 rounded text-[10px] font-medium"
+                                onclick="switchTab(this, 'month')">按月</button>
+                            <button
+                                class="tab-btn px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600"
+                                onclick="switchTab(this, 'quarter')">按季</button>
+                        </div>
+                    </div>
+                    <div class="p-2 chart-container">
+                        <div id="historyChart" class="w-full h-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PART 3: 预警告警信息 -->
+            <div class="glass-panel rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
+                <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-bell text-amber-500 text-xs"></i>
+                        <h3 class="text-xs font-bold text-slate-800">预警告警信息</h3>
+                        <span
+                            class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-600 border border-red-100">3
+                            条未处理</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select class="px-2 py-1 border border-slate-200 rounded text-[10px] text-slate-600 bg-white">
+                            <option value="">全部级别</option>
+                            <option value="critical">严重</option>
+                            <option value="warning">警告</option>
+                            <option value="info">提示</option>
+                        </select>
+                        <button class="text-[10px] text-sky-600 hover:text-sky-700 font-medium">
+                            <i class="fa-solid fa-check-all mr-1"></i>全部标记已读
+                        </button>
+                    </div>
+                </div>
+
+                <div class="divide-y divide-slate-100">
+                    <!-- 严重告警 -->
+                    <div class="alert-item p-3 flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span
+                                    class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-red-100 text-red-700">严重</span>
+                                <span class="text-xs font-medium text-slate-800 truncate">科学数据存储分区使用率超过85%</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500">科学数据分区 /sci_data 当前使用率 87.3%，建议立即清理或扩容</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[10px] text-slate-400">2025-03-17 14:25:32</div>
+                            <div class="flex items-center gap-2 mt-1 justify-end">
+                                <button class="text-[10px] text-sky-600 hover:text-sky-700">查看详情</button>
+                                <button class="text-[10px] text-slate-400 hover:text-slate-600">忽略</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 警告告警 -->
+                    <div class="alert-item p-3 flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-exclamation text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span
+                                    class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-700">警告</span>
+                                <span class="text-xs font-medium text-slate-800 truncate">遥测数据写入延迟超过阈值</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500">过去30分钟内平均写入延迟 245ms，超过阈值 200ms</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[10px] text-slate-400">2025-03-17 14:18:45</div>
+                            <div class="flex items-center gap-2 mt-1 justify-end">
+                                <button class="text-[10px] text-sky-600 hover:text-sky-700">查看详情</button>
+                                <button class="text-[10px] text-slate-400 hover:text-slate-600">忽略</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 警告告警 -->
+                    <div class="alert-item p-3 flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-exclamation text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span
+                                    class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-700">警告</span>
+                                <span class="text-xs font-medium text-slate-800 truncate">工程参数存储备份任务失败</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500">今日凌晨 02:00 自动备份任务执行失败，错误码: 0x5003</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[10px] text-slate-400">2025-03-17 02:15:18</div>
+                            <div class="flex items-center gap-2 mt-1 justify-end">
+                                <button class="text-[10px] text-sky-600 hover:text-sky-700">查看详情</button>
+                                <button class="text-[10px] text-slate-400 hover:text-slate-600">忽略</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 提示信息 -->
+                    <div class="alert-item p-3 flex items-center gap-3 bg-slate-50/50">
+                        <div
+                            class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-info text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span
+                                    class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-100 text-blue-700">提示</span>
+                                <span class="text-xs font-medium text-slate-800 truncate">存储系统例行维护已完成</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500">系统于 03:00-04:00 完成索引优化，性能提升约 15%</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[10px] text-slate-400">2025-03-17 04:05:00</div>
+                            <div class="flex items-center gap-2 mt-1 justify-end">
+                                <span class="text-[10px] text-green-600"><i
+                                        class="fa-solid fa-check mr-1"></i>已处理</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-3 py-2 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <span class="text-[10px] text-slate-500">显示 1-4 条，共 12 条告警</span>
+                    <div class="flex items-center gap-1">
+                        <button
+                            class="px-2 py-1 border border-slate-200 rounded text-[10px] text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                            disabled>
+                            <i class="fa-solid fa-angle-left"></i>
+                        </button>
+                        <button
+                            class="px-2 py-1 border border-slate-200 rounded text-[10px] bg-sky-500 text-white">1</button>
+                        <button
+                            class="px-2 py-1 border border-slate-200 rounded text-[10px] text-slate-600 hover:bg-slate-100">2</button>
+                        <button
+                            class="px-2 py-1 border border-slate-200 rounded text-[10px] text-slate-600 hover:bg-slate-100">3</button>
+                        <button
+                            class="px-2 py-1 border border-slate-200 rounded text-[10px] text-slate-600 hover:bg-slate-100">
+                            <i class="fa-solid fa-angle-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PART 4: 存储健康度与详细指标 -->
+            <div class="grid grid-cols-3 gap-4">
+                <!-- IOPS监控 -->
+                <div class="glass-panel rounded-lg p-3 border border-slate-200 shadow-sm bg-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-[11px] font-bold text-slate-800">IOPS 性能监控</h3>
+                        <span class="text-[10px] text-green-600 font-medium">正常</span>
+                    </div>
+                    <div class="space-y-2">
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="text-slate-600">读取 IOPS</span>
+                                <span class="font-medium text-slate-800">2,456</span>
+                            </div>
+                            <div class="bg-slate-100 rounded-full h-1.5">
+                                <div class="bg-blue-500 h-1.5 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="text-slate-600">写入 IOPS</span>
+                                <span class="font-medium text-slate-800">1,832</span>
+                            </div>
+                            <div class="bg-slate-100 rounded-full h-1.5">
+                                <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 35%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="text-slate-600">平均延迟</span>
+                                <span class="font-medium text-slate-800">12.5 ms</span>
+                            </div>
+                            <div class="bg-slate-100 rounded-full h-1.5">
+                                <div class="bg-orange-500 h-1.5 rounded-full" style="width: 25%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 存储节点状态 -->
+                <div class="glass-panel rounded-lg p-3 border border-slate-200 shadow-sm bg-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-[11px] font-bold text-slate-800">存储节点状态</h3>
+                        <span class="text-[10px] text-slate-500">6 个节点</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between p-1.5 bg-slate-50 rounded">
+                            <div class="flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                <span class="text-[10px] text-slate-700">Node-01 (主)</span>
+                            </div>
+                            <span class="text-[10px] text-green-600">在线</span>
+                        </div>
+                        <div class="flex items-center justify-between p-1.5 bg-slate-50 rounded">
+                            <div class="flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                <span class="text-[10px] text-slate-700">Node-02 (备)</span>
+                            </div>
+                            <span class="text-[10px] text-green-600">在线</span>
+                        </div>
+                        <div class="flex items-center justify-between p-1.5 bg-slate-50 rounded">
+                            <div class="flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                <span class="text-[10px] text-slate-700">Node-03 (备)</span>
+                            </div>
+                            <span class="text-[10px] text-green-600">在线</span>
+                        </div>
+                        <div class="flex items-center justify-between p-1.5 bg-slate-50 rounded">
+                            <div class="flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                <span class="text-[10px] text-slate-700">Node-04 (备)</span>
+                            </div>
+                            <span class="text-[10px] text-amber-600">高负载</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 备份状态 -->
+                <div class="glass-panel rounded-lg p-3 border border-slate-200 shadow-sm bg-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-[11px] font-bold text-slate-800">备份与归档</h3>
+                        <span class="text-[10px] text-amber-600 font-medium">1 项异常</span>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-database text-blue-500 text-xs"></i>
+                                <span class="text-[10px] text-slate-700">科学数据备份</span>
+                            </div>
+                            <span class="text-[10px] text-green-600">正常</span>
+                        </div>
+                        <div class="text-[9px] text-slate-400">上次备份: 2025-03-17 02:00</div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-tower-broadcast text-emerald-500 text-xs"></i>
+                                <span class="text-[10px] text-slate-700">遥测数据备份</span>
+                            </div>
+                            <span class="text-[10px] text-green-600">正常</span>
+                        </div>
+                        <div class="text-[9px] text-slate-400">上次备份: 2025-03-17 02:00</div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-gears text-orange-500 text-xs"></i>
+                                <span class="text-[10px] text-slate-700">工程参数备份</span>
+                            </div>
+                            <span class="text-[10px] text-red-600">失败</span>
+                        </div>
+                        <div class="text-[9px] text-red-400">上次备份: 2025-03-16 02:00 (已过期)</div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="text-center text-[10px] text-slate-400 mt-4 pb-2">
+                &copy; 2024 中国科学院国家空间科学中心 | 仿真数据管理系统 | NSSC, CAS
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        // --- Submenu Toggle Logic ---
+        function toggleSubmenu(element) {
+            element.classList.toggle('expanded');
+        }
+
+        // --- Update Time ---
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.getFullYear() + '-' +
+                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                String(now.getDate()).padStart(2, '0') + ' ' +
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0') + ':' +
+                String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // --- Storage Pie Chart (含剩余空间) ---
+        let storagePieChart, currentTrendChart, historyChart;
+
+        function initCharts() {
+            // 1. Storage Pie Chart
+            const pieDom = document.getElementById('storagePieChart');
+            if (pieDom && !storagePieChart) {
+                storagePieChart = echarts.init(pieDom);
+                storagePieChart.setOption({
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} TB ({d}%)',
+                        textStyle: { fontSize: 11 }
+                    },
+                    series: [
+                        {
+                            name: '存储分布',
+                            type: 'pie',
+                            radius: ['0%', '75%'],
+                            center: ['50%', '50%'],
+                            avoidLabelOverlap: true,
+                            itemStyle: {
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            },
+                            label: {
+                                show: true,
+                                position: 'inside',
+                                formatter: '{b}\n{d}%\n{c}TB',
+                                fontSize: 10,
+                                fontWeight: 'bold',
+                                color: '#fff',
+                                textShadowColor: 'rgba(0,0,0,0.3)',
+                                textShadowBlur: 2
+                            },
+                            labelLine: { show: false },
+                            emphasis: {
+                                label: { show: true, fontSize: 11, fontWeight: 'bold' }
+                            },
+                            data: [
+                                { value: 8.2, name: '科学数据', itemStyle: { color: '#ef4444' } },
+                                { value: 4.6, name: '遥测数据', itemStyle: { color: '#06b6d4' } },
+                                { value: 3.0, name: '工程参数', itemStyle: { color: '#10b981' } },
+                                { value: 4.2, name: '剩余空间', itemStyle: { color: '#94a3b8' } }
+                            ]
+                        }
+                    ]
+                });
+            }
+
+            // 2. Current Trend Chart
+            const trendDom = document.getElementById('currentTrendChart');
+            if (trendDom && !currentTrendChart) {
+                currentTrendChart = echarts.init(trendDom);
+                const days = ['03-11', '03-12', '03-13', '03-14', '03-15', '03-16', '03-17'];
+                currentTrendChart.setOption({
+                    tooltip: { trigger: 'axis', textStyle: { fontSize: 11 } },
+                    legend: {
+                        data: ['科学数据', '遥测数据', '工程参数', '总计'],
+                        bottom: 0,
+                        textStyle: { fontSize: 10 },
+                        itemHeight: 8,
+                        itemWidth: 12
+                    },
+                    grid: { left: '2%', right: '3%', bottom: '18%', top: '8%', containLabel: true },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: days,
+                        axisLine: { lineStyle: { color: '#cbd5e1' } },
+                        axisLabel: { color: '#64748b', fontSize: 9 },
+                        axisTick: { show: false }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: 'GB',
+                        nameTextStyle: { fontSize: 9, color: '#64748b' },
+                        splitLine: { lineStyle: { color: '#f1f5f9' } },
+                        axisLabel: { color: '#64748b', fontSize: 9 }
+                    },
+                    series: [
+                        {
+                            name: '科学数据', type: 'line', smooth: true, symbol: 'circle', symbolSize: 4,
+                            data: [120, 132, 145, 160, 175, 190, 210],
+                            lineStyle: { width: 2, color: '#3b82f6' },
+                            itemStyle: { color: '#3b82f6' },
+                            areaStyle: { color: 'rgba(59, 130, 246, 0.1)' }
+                        },
+                        {
+                            name: '遥测数据', type: 'line', smooth: true, symbol: 'circle', symbolSize: 4,
+                            data: [80, 85, 90, 95, 100, 110, 115],
+                            lineStyle: { width: 2, color: '#10b981' },
+                            itemStyle: { color: '#10b981' },
+                            areaStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                        },
+                        {
+                            name: '工程参数', type: 'line', smooth: true, symbol: 'circle', symbolSize: 4,
+                            data: [45, 48, 50, 52, 55, 58, 62],
+                            lineStyle: { width: 2, color: '#f97316' },
+                            itemStyle: { color: '#f97316' },
+                            areaStyle: { color: 'rgba(249, 115, 22, 0.1)' }
+                        },
+                        {
+                            name: '总计', type: 'line', smooth: true, symbol: 'circle', symbolSize: 4,
+                            data: [245, 265, 285, 307, 330, 358, 387],
+                            lineStyle: { width: 2, color: '#8b5cf6', type: 'dashed' },
+                            itemStyle: { color: '#8b5cf6' }
+                        }
+                    ]
+                });
+            }
+
+            // 3. History Chart
+            const histDom = document.getElementById('historyChart');
+            if (histDom && !historyChart) {
+                historyChart = echarts.init(histDom);
+                const months = ['2024-09', '2024-10', '2024-11', '2024-12', '2025-01', '2025-02', '2025-03'];
+                historyChart.setOption({
+                    tooltip: { trigger: 'axis', textStyle: { fontSize: 11 } },
+                    legend: {
+                        data: ['科学数据', '遥测数据', '工程参数', '总计'],
+                        bottom: 0,
+                        textStyle: { fontSize: 10 },
+                        itemHeight: 8,
+                        itemWidth: 12
+                    },
+                    grid: { left: '2%', right: '3%', bottom: '18%', top: '8%', containLabel: true },
+                    xAxis: {
+                        type: 'category',
+                        data: months,
+                        axisLine: { lineStyle: { color: '#cbd5e1' } },
+                        axisLabel: { color: '#64748b', fontSize: 9 },
+                        axisTick: { show: false }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: 'TB',
+                        nameTextStyle: { fontSize: 9, color: '#64748b' },
+                        splitLine: { lineStyle: { color: '#f1f5f9' } },
+                        axisLabel: { color: '#64748b', fontSize: 9 }
+                    },
+                    series: [
+                        {
+                            name: '科学数据', type: 'bar', stack: 'total',
+                            data: [1.2, 1.5, 1.8, 2.1, 2.5, 2.9, 3.2],
+                            itemStyle: { color: '#3b82f6' }
+                        },
+                        {
+                            name: '遥测数据', type: 'bar', stack: 'total',
+                            data: [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4],
+                            itemStyle: { color: '#10b981' }
+                        },
+                        {
+                            name: '工程参数', type: 'bar', stack: 'total',
+                            data: [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1],
+                            itemStyle: { color: '#f97316' }
+                        },
+                        {
+                            name: '总计', type: 'line',
+                            data: [2.5, 3.0, 3.5, 4.0, 4.6, 5.2, 5.7],
+                            lineStyle: { width: 2, color: '#8b5cf6', type: 'dashed' },
+                            itemStyle: { color: '#8b5cf6' },
+                            symbol: 'circle', symbolSize: 4
+                        }
+                    ]
+                });
+            }
+        }
+
+        // Initialize charts after DOM ready
+        document.addEventListener('DOMContentLoaded', initCharts);
+
+        // --- Tab Switch ---
+        function switchTab(btn, type) {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            btn.classList.add('active');
+            btn.classList.remove('bg-slate-100', 'text-slate-600');
+
+            if (type === 'quarter') {
+                historyChart.setOption({
+                    xAxis: { data: ['2024-Q3', '2024-Q4', '2025-Q1'] },
+                    series: [
+                        { data: [4.5, 6.2, 9.5] },
+                        { data: [2.7, 3.3, 3.9] },
+                        { data: [1.8, 2.3, 3.0] },
+                        { data: [9.0, 11.8, 16.4] }
+                    ]
+                });
+            } else {
+                const months = ['2024-09', '2024-10', '2024-11', '2024-12', '2025-01', '2025-02', '2025-03'];
+                historyChart.setOption({
+                    xAxis: { data: months },
+                    series: [
+                        { data: [1.2, 1.5, 1.8, 2.1, 2.5, 2.9, 3.2] },
+                        { data: [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4] },
+                        { data: [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1] },
+                        { data: [2.5, 3.0, 3.5, 4.0, 4.6, 5.2, 5.7] }
+                    ]
+                });
+            }
+        }
+
+        // --- Resize Handler ---
+        window.addEventListener('resize', () => {
+            if (storagePieChart) storagePieChart.resize();
+            if (currentTrendChart) currentTrendChart.resize();
+            if (historyChart) historyChart.resize();
+        });
+    </script>
+
+</body>
+
+</html>
