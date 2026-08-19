@@ -1,0 +1,49 @@
+---
+description: Maven多模块目录、依赖方向与文档分层。新建模块、改代码、写文档时必须遵守。
+alwaysApply: true
+---
+
+# Maven 多模块约束
+
+人读约定见 `docs/多模块Maven项目目录结构规范.md`。改目录约定时，必须同时改该文档与本规则。
+
+## 代码落点
+
+- 业务代码只写在对应子模块 `src/main`。禁止在仓库根创建 `src/`。
+- 测试只写在对应模块 `src/test`。不要建模块根 `tests/`，不要改 `testSourceDirectory`。
+- `src/main/webapp` 仅当该模块 `packaging=war`。Spring Boot 可执行 jar 与库模块禁止建 `webapp/`。
+- 改代码前确认模块边界，禁止把 A 模块实现写进 B 模块。
+- 包名与模块对应，如 `com.xxx.common`、`com.xxx.service.a`。不要把多个模块的类塞进同一个根包。
+
+## 依赖（DAG，不是 POM parent）
+
+- 允许：`module-boot` → `module-service-*` → `module-common`。
+- 禁止：模块环依赖；用 `<parent>` 表达业务父子；在库或 service 模块放 `@SpringBootApplication` 或 `spring-boot-maven-plugin`。
+- 全仓库只有一个可启动模块（`module-boot`）：唯一 `main` 与 `@SpringBootApplication`。
+- 兄弟模块依赖：版本在父 POM `dependencyManagement` 声明；子模块只写 `groupId` + `artifactId`，不写 `version`。
+- 父 POM `packaging=pom`，只做 modules 列表、版本、`dependencyManagement`、`pluginManagement`。
+
+## 新增模块清单
+
+1. 新建模块目录与 `pom.xml`（`<relativePath>../pom.xml</relativePath>`）
+2. 父 POM `<modules>` 增加节点
+3. 若会被其他模块依赖，在父 POM `dependencyManagement` 登记
+4. 写模块 `README.md`（职责、对外能力、启动）
+5. 建模块 `docs/`
+6. 文件名、模块名、XML 只使用 ASCII 连字符 `-`，不要用 `‑`（U+2011）
+
+## 文档分层
+
+- 根 `docs/`：跨 2+ 模块、整体需求/架构、跨模块 API、原始归档、全局 todo。
+- 子模块 `docs/`：仅本模块的设计、私有表、内部接口、模块 todo。
+- 模块 `README.md` 保持短入口，不写长篇设计。
+- 单模块细节不要写进根 docs；跨模块变更必须更新根 docs。
+- 实现 UI 时用 `@` 引用 `docs/original/` 下的具体页面，不要把整个 `original/` 塞进上下文。
+
+## 脚本与 AI 配置
+
+- 根 `scripts/`：全局构建/环境/发布。模块 `scripts/`：仅该模块。
+- 只使用根目录 `.cursor/`。禁止在子模块创建 `.cursor/`。
+- 提交：`rules/`、`agents/`、`skills/*/SKILL.md`、`mcp.json`。不提交：`cache/`、`sessions/`、`logs/`、`*.local`。
+- Skill 必须是 `.cursor/skills/<name>/SKILL.md`，不要把 `SKILL.md` 直接放在 `skills/` 根下。
+- `mcp.json` 禁止写密钥；用环境变量或根目录 `.env`（`.env` 不入库）。

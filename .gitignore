@@ -7,7 +7,7 @@
 **/dependency-reduced-pom.xml
 **/buildNumber.properties
 **/.mvn/timing.properties
-**/.mvn/wrapper/maven-wrapper.jar
+# maven-wrapper.jar 需要提交，保证无本机 Maven 时可用 mvnw 构建
 
 # ===================== IDEA / IntelliJ =====================
 .idea/
@@ -18,35 +18,35 @@ out/
 **/out/
 .idea_modules/
 
-# ===================== VSCode / Cursor 本地缓存【重要】 =====================
-# ✅ .cursor/rule,agents,skills,mcp.json 要提交！只忽略本地缓存
+# ===================== VSCode / Cursor 本地缓存 =====================
+# 提交：.cursor/rules、agents、skills、mcp.json
+# 忽略：本地缓存与本机覆盖
 .cursor/cache/
 .cursor/sessions/
 .cursor/logs/
-.cursor/.temp/**
+.cursor/.temp/
 .cursor/**/*.tmp
 .cursor/**/*.local
 
 .vscode/
-*.code‑workspace
+*.code-workspace
 .DS_Store
 
 # ===================== 系统、临时文件 =====================
-.DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
 
 # ===================== 环境变量、密钥、本地配置 =====================
-# mcp.json 提交模板，密钥放到 .env，.env绝不提交
+# mcp.json 提交模板；密钥放 .env，绝不提交
 .env
 .env.local
 .env.*.local
 **/*.secret
-**/*‑local.yml
-**/*‑local.yaml
-**/*‑local.properties
+**/*-local.yml
+**/*-local.yaml
+**/*-local.properties
 
 # ===================== 日志 =====================
 **/logs/
@@ -57,22 +57,20 @@ Thumbs.db
 **/*.tmp
 **/*.bak
 **/dist/
-**/build/
 
 # ===================== 归档、导出文件 =====================
+# 默认忽略办公文档；仅 docs/original/ 及其子目录允许归档
 *.pdf
 *.docx
 *.xlsx
-!docs/original/*.pdf
-!docs/original/*.docx
+!docs/original/**/*.pdf
+!docs/original/**/*.docx
+!docs/original/**/*.xlsx
 
 # ===================== 测试报告 =====================
-**/surefire‑reports/
-**/jacoco‑report/
-
-# ===================== Docker 相关 =====================
-.dockerignore
-*.docker
+**/target/surefire-reports/
+**/target/jacoco-report/
+**/jacoco-report/
 
 # ===================== 自定义本地脚本输出 =====================
 **/scripts/output/

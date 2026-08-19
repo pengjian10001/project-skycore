@@ -1,0 +1,16 @@
+# 办公/二进制原稿：git 可归档，不要进入 Agent 索引
+*.pdf
+*.docx
+*.xlsx
+*.doc
+*.xls
+*.ppt
+*.pptx
+
+# 构建产物
+**/target/
+
+# 密钥
+.env
+.env.*
+!**/.env.example
