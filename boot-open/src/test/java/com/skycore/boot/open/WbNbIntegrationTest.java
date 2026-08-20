@@ -70,6 +70,26 @@ class WbNbIntegrationTest {
     }
 
     @Test
+    void wb001SpoPilotThenDashboard() throws Exception {
+        String body = """
+                {
+                  "payloadId": "PL-MHI",
+                  "frameType": "MHI_SCI_20000",
+                  "rawHex": "EB90 2000 0001 000A 0000000186A0"
+                }
+                """;
+        mockMvc.perform(post("/api/open/wb/001/payload-data")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.frameType").value("MHI_SCI_20000"))
+                .andExpect(jsonPath("$.data.spoFields.SCI200001").value("0xEB90"))
+                .andExpect(jsonPath("$.data.spoFields.SCI200004").value(10))
+                .andExpect(jsonPath("$.data.satTime").value(100000));
+    }
+
+    @Test
     void validationFails() throws Exception {
         mockMvc.perform(post("/api/open/wb/001/payload-data")
                         .contentType(MediaType.APPLICATION_JSON)

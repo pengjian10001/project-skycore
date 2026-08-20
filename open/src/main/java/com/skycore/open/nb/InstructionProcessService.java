@@ -36,11 +36,16 @@ public class InstructionProcessService {
         result.setProcStage(2);
 
         if (type == TYPE_PAYLOAD_CMD) {
-            String cmd = String.format(Locale.ROOT,
-                    "PAYLOAD=%s OP=%s DIGEST=%s",
-                    nullToDash(request.getPayloadId()),
-                    request.getOpCode() == null ? "-" : request.getOpCode(),
-                    nullToDash(request.getRawDigest()));
+            String cmd;
+            if (request.getRawDigest() != null && request.getRawDigest().startsWith("SPO=")) {
+                cmd = request.getRawDigest();
+            } else {
+                cmd = String.format(Locale.ROOT,
+                        "PAYLOAD=%s OP=%s DIGEST=%s",
+                        nullToDash(request.getPayloadId()),
+                        request.getOpCode() == null ? "-" : request.getOpCode(),
+                        nullToDash(request.getRawDigest()));
+            }
             result.setReadableCommand(cmd);
             result.setProcStage(3);
         } else {

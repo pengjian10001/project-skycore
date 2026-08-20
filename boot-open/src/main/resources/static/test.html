@@ -125,22 +125,14 @@
           <input id="p1_payloadId" value="PL-MHI-001" />
         </div>
         <div>
-          <label>satTime (ms)</label>
-          <input id="p1_satTime" type="number" />
+          <label>frameType</label>
+          <input id="p1_frameType" value="MHI_SCI_20000" />
         </div>
       </div>
-      <div class="row">
-        <div><label>magX</label><input id="p1_magX" type="number" step="0.1" value="12.5" /></div>
-        <div><label>magY</label><input id="p1_magY" type="number" step="0.1" value="-3.2" /></div>
-      </div>
-      <div class="row">
-        <div><label>magZ</label><input id="p1_magZ" type="number" step="0.1" value="8.1" /></div>
-        <div><label>status</label><input id="p1_status" type="number" value="1" /></div>
-      </div>
-      <label>rawDigest</label>
-      <input id="p1_raw" value="EB90AABBCCDD" />
+      <label>rawHex（SPO 原始帧）</label>
+      <input id="p1_raw" value="EB90 2000 0001 000A 0000000186A0" />
       <div class="actions">
-        <button type="button" onclick="sendWb001()">发送 WB-001</button>
+        <button type="button" onclick="sendWb001()">发送 WB-001（SPO 试点）</button>
       </div>
     </section>
 
@@ -180,7 +172,6 @@
   <script>
     const out = document.getElementById("out");
     const statusEl = document.getElementById("status");
-    document.getElementById("p1_satTime").value = Date.now();
 
     function showStatus(ok, text) {
       statusEl.className = "status " + (ok ? "ok" : "err");
@@ -206,12 +197,8 @@
     function sendWb001() {
       return call("POST", "/api/open/wb/001/payload-data", {
         payloadId: document.getElementById("p1_payloadId").value,
-        satTime: Number(document.getElementById("p1_satTime").value),
-        magX: Number(document.getElementById("p1_magX").value),
-        magY: Number(document.getElementById("p1_magY").value),
-        magZ: Number(document.getElementById("p1_magZ").value),
-        status: Number(document.getElementById("p1_status").value),
-        rawDigest: document.getElementById("p1_raw").value
+        frameType: document.getElementById("p1_frameType").value,
+        rawHex: document.getElementById("p1_raw").value
       });
     }
 

@@ -9,6 +9,7 @@ import com.skycore.common.protocol.wb.Wb003SimCommandRequest;
 import com.skycore.common.protocol.wb.Wb004ForwardCommand;
 import com.skycore.open.nb.InstructionProcessService;
 import com.skycore.open.nb.LogWritePort;
+import com.skycore.open.nb.PayloadFrameDecodeService;
 import com.skycore.open.nb.StoreWritePort;
 import com.skycore.open.nb.TcpCommunicationPort;
 import com.skycore.open.outbound.OutboundClient;
@@ -24,17 +25,20 @@ import java.util.Map;
 public class MainModuleOrchestrator {
 
     private final InstructionProcessService instructionProcessService;
+    private final PayloadFrameDecodeService payloadFrameDecodeService;
     private final TcpCommunicationPort tcpCommunicationPort;
     private final LogWritePort logWritePort;
     private final StoreWritePort storeWritePort;
     private final OutboundClient outboundClient;
 
     public MainModuleOrchestrator(InstructionProcessService instructionProcessService,
+                                  PayloadFrameDecodeService payloadFrameDecodeService,
                                   TcpCommunicationPort tcpCommunicationPort,
                                   LogWritePort logWritePort,
                                   StoreWritePort storeWritePort,
                                   OutboundClient outboundClient) {
         this.instructionProcessService = instructionProcessService;
+        this.payloadFrameDecodeService = payloadFrameDecodeService;
         this.tcpCommunicationPort = tcpCommunicationPort;
         this.logWritePort = logWritePort;
         this.storeWritePort = storeWritePort;
@@ -43,33 +47,46 @@ public class MainModuleOrchestrator {
 
     public Map<String, Object> ingestPayloadData(Wb001PayloadDataRequest request) {
         long start = System.currentTimeMillis();
+        PayloadFrameDecodeService.DecodeResult decoded = payloadFrameDecodeService.decode(request);
+
         Nb001ProcessRequest nbReq = new Nb001ProcessRequest();
         nbReq.setInstrType(InstructionProcessService.TYPE_PAYLOAD_CMD);
         nbReq.setPayloadId(request.getPayloadId());
-        nbReq.setRawDigest(request.getRawDigest());
         nbReq.setOpCode(request.getStatus());
+        if (decoded.isSpoDecoded()) {
+            nbReq.setRawDigest(decoded.getSummary());
+        } else {
+            nbReq.setRawDigest(request.resolveRawHex());
+        }
 
         Nb001ProcessResult processed = instructionProcessService.process(nbReq);
 
+        Object storeBody = decoded.isSpoDecoded() ? decoded.getFields() : processed.getReadableCommand();
         Nb004StoreRecord stored = storeWritePort.store(
                 "TASK-DEFAULT",
                 request.getPayloadId(),
                 1,
-                processed.getReadableCommand());
+                String.valueOf(storeBody));
 
         Wb002ParsedPayloadData outbound = new Wb002ParsedPayloadData();
         outbound.setTransId(processed.getTransId());
         outbound.setPayloadId(request.getPayloadId());
         outbound.setParseTime(System.currentTimeMillis());
         outbound.setValidFlag(1);
-        Double magTotal = null;
-        if (request.getMagX() != null && request.getMagY() != null && request.getMagZ() != null) {
-            magTotal = Math.sqrt(
-                    request.getMagX() * request.getMagX()
-                            + request.getMagY() * request.getMagY()
-                            + request.getMagZ() * request.getMagZ());
+        if (decoded.isSpoDecoded()) {
+            outbound.setSpoFields(decoded.getFields());
+            outbound.setFrameType(decoded.getFrameType());
+            outbound.setSpoSheet(decoded.getSpoSheet());
+        } else {
+            Double magTotal = null;
+            if (request.getMagX() != null && request.getMagY() != null && request.getMagZ() != null) {
+                magTotal = Math.sqrt(
+                        request.getMagX() * request.getMagX()
+                                + request.getMagY() * request.getMagY()
+                                + request.getMagZ() * request.getMagZ());
+            }
+            outbound.setMagTotal(magTotal);
         }
-        outbound.setMagTotal(magTotal);
         outboundClient.sendToSimPlatform(outbound);
 
         try {
@@ -80,7 +97,8 @@ public class MainModuleOrchestrator {
         }
 
         logWritePort.write(1, "Orchestrator", "WB001",
-                "ingest payload " + request.getPayloadId(),
+                "ingest payload " + request.getPayloadId()
+                        + (decoded.isSpoDecoded() ? " spo=" + decoded.getFrameType() : ""),
                 0, processed.getTransId());
 
         Map<String, Object> result = new HashMap<>();
@@ -88,6 +106,13 @@ public class MainModuleOrchestrator {
         result.put("recordId", stored.getRecordId());
         result.put("forwarded", outbound);
         result.put("durationMs", System.currentTimeMillis() - start);
+        if (decoded.isSpoDecoded()) {
+            result.put("frameType", decoded.getFrameType());
+            result.put("spoSheet", decoded.getSpoSheet());
+            result.put("spoFields", decoded.getFields());
+            result.put("frameBytes", decoded.getFrameBytes());
+            result.put("satTime", decoded.getSatTime() != null ? decoded.getSatTime() : request.getSatTime());
+        }
         return result;
     }
 

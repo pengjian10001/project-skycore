@@ -31,6 +31,7 @@ class MainModuleOrchestratorTest {
         TcpCommunicationPort tcp = new TcpCommunicationPort();
         orchestrator = new MainModuleOrchestrator(
                 new InstructionProcessService(),
+                new PayloadFrameDecodeService(),
                 tcp,
                 logWritePort,
                 storeWritePort,
@@ -53,6 +54,24 @@ class MainModuleOrchestratorTest {
         assertEquals(1, storeWritePort.size());
         assertEquals(1, logWritePort.size());
         assertTrue(outboundClient.snapshotSimPlatform().get(0).getMagTotal() > 0);
+    }
+
+    @Test
+    void wb001SpoPilotPipeline() {
+        Wb001PayloadDataRequest req = new Wb001PayloadDataRequest();
+        req.setPayloadId("PL-MHI");
+        req.setFrameType("MHI_SCI_20000");
+        req.setRawHex("EB90 2000 0001 000A 0000000186A0");
+
+        Map<String, Object> result = orchestrator.ingestPayloadData(req);
+        assertNotNull(result.get("transId"));
+        assertEquals("MHI_SCI_20000", result.get("frameType"));
+        assertEquals(100000L, result.get("satTime"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> fields = (Map<String, Object>) result.get("spoFields");
+        assertEquals("0xEB90", fields.get("SCI200001"));
+        assertEquals(1, outboundClient.snapshotSimPlatform().size());
+        assertNotNull(outboundClient.snapshotSimPlatform().get(0).getSpoFields());
     }
 
     @Test

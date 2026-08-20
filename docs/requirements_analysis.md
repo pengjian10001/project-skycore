@@ -137,12 +137,13 @@ flowchart LR
 | # | 问题 | 建议 |
 |---|------|------|
 | 1 | 数据流图 TCP vs 接口表 HTTP | 外联双栈；联调确认主路径 |
-| 2 | SRS 示例字段 vs SPO | 以 SPO 为准 |
-| 3 | 接口.docx RS422 与 HTTP/TCP 并存 | 字典 common；解析 open |
+| 2 | SRS 示例字段 vs SPO | **以 SPO 为准**；接口↔sheet 映射见 [api_design.md](api_design.md) 第 3 节 |
+| 3 | 接口.docx RS422 与 HTTP/TCP 并存 | 帧格式归 WB-004/NB-001；字典字段归 SPO |
 | 4 | 任务与流水线绑定 | 设计阶段定策略 |
 | 5 | 库配置生效范围 | 明确 open/console 是否同库 |
 | 6 | 大屏鉴权 | WB-005 归 open |
 | 7 | Windows 交付约束 | 验收以 Windows 为准 |
+| 8 | 第 1 期代码尚未按 SPO sheet 解帧 | 流水线已通；字典装载与按 sheet 解析列入 open 后续 |
 
 ## 7. 文档索引
 
