@@ -4,8 +4,17 @@
 
 ## 当前开期
 
-**第 1 期**：外联开放接口 — `common` + `open` + `boot-open`  
-完整分期：[docs/phased_delivery.md](docs/phased_delivery.md)
+**第 1 期已实现**：外联 `common` + `open` + `boot-open`  
+联调页：启动后打开 [http://localhost:8081/test.html](http://localhost:8081/test.html)
+
+```bash
+./scripts/dev-start-open.sh
+# 或（注意必须带 -pl boot-open；父 POM 已 skip spring-boot:run）
+mvn -pl boot-open -am spring-boot:run
+```
+
+测试：`mvn -pl common,open,boot-open -am test`  
+分期说明：[docs/phased_delivery.md](docs/phased_delivery.md) · API：[docs/api_design.md](docs/api_design.md)
 
 ## 目录
 

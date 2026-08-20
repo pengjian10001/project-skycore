@@ -10,17 +10,17 @@
 - [x] 更新规范、规则、`requirements_analysis.md`
 - [x] 迁走旧 `module-*` 目录，建立第 1 期目录骨架
 
-## 第 1 期：外联 `open` + `boot-open`（进行中）
+## 第 1 期：外联 `open` + `boot-open`
 
-- [ ] 父 POM + `common` / `open` / `boot-open` 可编译（含 Maven Wrapper）
-- [ ] `common`：WB/NB-001~004 DTO、ApiResponse、ErrorCode + 单测
-- [ ] `open`：NB-001~004 + Orchestrator + WB-001~005 + 单元测试
-- [ ] `boot-open`：启动配置 + 集成测试
-- [ ] `docs/api_design.md`（外联）+ `boot-open/docs/route-config.md` 回填
-- [ ] `scripts/dev-start-open.sh` 可用
+- [x] 父 POM + `common` / `open` / `boot-open` 骨架
+- [x] `common`：WB/NB DTO、ApiResponse、ErrorCode + 单测
+- [x] `open`：NB-001~004 + Orchestrator + WB API + 单元测试
+- [x] `boot-open`：启动配置 + 集成测试 + 联调页 `/test.html`
+- [x] `docs/api_design.md` + `boot-open/docs/route-config.md`
+- [ ] Maven Wrapper（可选：本机有 `mvn` 时可生成）
 
-**部署**：只起 `boot-open`（如 8081）  
-**测试**：`./mvnw -pl common,open test`；`./mvnw -pl boot-open test`
+**部署**：`mvn -pl boot-open -am spring-boot:run` → [http://localhost:8081/test.html](http://localhost:8081/test.html)  
+**测试**：`mvn -pl common,open,boot-open -am test`
 
 ## 第 2～8 期（未开始）
 

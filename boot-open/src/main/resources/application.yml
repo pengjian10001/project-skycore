@@ -1,0 +1,10 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: boot-open
+
+logging:
+  level:
+    com.skycore: INFO
