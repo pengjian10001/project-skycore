@@ -7,19 +7,26 @@ alwaysApply: true
 
 人读约定见 `docs/多模块Maven项目目录结构规范.md`。改目录约定时，必须同时改该文档与本规则。
 
+## 命名
+
+- 模块目录名与 `artifactId` **不加** `module-` 前缀。本项目：`common`、`open`、`boot-open`、`console-*`、`boot-console`。
+- 文件名、模块名、XML 只使用 ASCII 连字符 `-`，不要用 `‑`（U+2011）。
+
 ## 代码落点
 
 - 业务代码只写在对应子模块 `src/main`。禁止在仓库根创建 `src/`。
 - 测试只写在对应模块 `src/test`。不要建模块根 `tests/`，不要改 `testSourceDirectory`。
 - `src/main/webapp` 仅当该模块 `packaging=war`。Spring Boot 可执行 jar 与库模块禁止建 `webapp/`。
 - 改代码前确认模块边界，禁止把 A 模块实现写进 B 模块。
-- 包名与模块对应，如 `com.xxx.common`、`com.xxx.service.a`。不要把多个模块的类塞进同一个根包。
+- 包名与模块对应，如 `com.skycore.common`、`com.skycore.open`、`com.skycore.console.monitor`。不要把多个模块的类塞进同一个根包。
 
 ## 依赖（DAG，不是 POM parent）
 
-- 允许：`module-boot` → `module-service-*` → `module-common`。
-- 禁止：模块环依赖；用 `<parent>` 表达业务父子；在库或 service 模块放 `@SpringBootApplication` 或 `spring-boot-maven-plugin`。
-- 全仓库只有一个可启动模块（`module-boot`）：唯一 `main` 与 `@SpringBootApplication`。
+- 允许：`boot-open` → `open` → `common`；`boot-console` → 已完成的 `console-*` → `common`。
+- 禁止：模块环依赖；用 `<parent>` 表达业务父子；在库或业务 jar 放 `@SpringBootApplication` 或 `spring-boot-maven-plugin`。
+- 按部署单元各一个可启动模块（本项目：`boot-open`、`boot-console`）。每个 boot 内唯一 `main` 与 `@SpringBootApplication`。
+- `open` 与任意 `console-*` 互不依赖；`console-*` 之间互不依赖。跨进程走共享库表 / 消息 / 约定接口。
+- 父 POM 只登记**当期及以前已开期**的模块；一期原则上只新开一个业务 jar（第 1 期为 `open`+`boot-open`；第 2 期起每次一个 `console-*`）。
 - 兄弟模块依赖：版本在父 POM `dependencyManagement` 声明；子模块只写 `groupId` + `artifactId`，不写 `version`。
 - 父 POM `packaging=pom`，只做 modules 列表、版本、`dependencyManagement`、`pluginManagement`。
 
@@ -30,11 +37,11 @@ alwaysApply: true
 3. 若会被其他模块依赖，在父 POM `dependencyManagement` 登记
 4. 写模块 `README.md`（职责、对外能力、启动）
 5. 建模块 `docs/`
-6. 文件名、模块名、XML 只使用 ASCII 连字符 `-`，不要用 `‑`（U+2011）
+6. 更新根 `docs/phased_delivery.md` / `docs/todo.md` 中的分期状态（若适用）
 
 ## 文档分层
 
-- 根 `docs/`：跨 2+ 模块、整体需求/架构、跨模块 API、原始归档、全局 todo。
+- 根 `docs/`：跨 2+ 模块、整体需求/架构、跨模块 API、原始归档、分期计划、全局 todo。
 - 子模块 `docs/`：仅本模块的设计、私有表、内部接口、模块 todo。
 - 模块 `README.md` 保持短入口，不写长篇设计。
 - 单模块细节不要写进根 docs；跨模块变更必须更新根 docs。
